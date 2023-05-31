@@ -1,0 +1,15 @@
+t=2023-02-03T00:33:17-0800 lvl=info msg=Configured api=signer audit log=audit.log
+t=2023-02-03T00:33:40-0800 lvl=info msg=Version    api=signer type=request metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T00:33:40-0800 lvl=info msg=Version    api=signer type=response data=6.1.0 error=nil
+t=2023-02-03T00:34:01-0800 lvl=info msg=List       api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T00:43:28-0800 lvl=info msg=Version    api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T00:43:28-0800 lvl=info msg=Version    api=signer type=response data=6.1.0 error=nil
+t=2023-02-03T00:44:20-0800 lvl=info msg=Version    api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T00:44:20-0800 lvl=info msg=Version    api=signer type=response data=6.1.0 error=nil
+t=2023-02-03T01:05:49-0800 lvl=info msg=List       api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T01:07:16-0800 lvl=info msg=List       api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T01:07:51-0800 lvl=info msg=List       api=signer type=response data=[0x87b9A0dfed8D9632164d886aD5a796599e4257F8]
+t=2023-02-03T01:07:52-0800 lvl=info msg=List       api=signer type=response data=[0x87b9A0dfed8D9632164d886aD5a796599e4257F8]
+t=2023-02-03T01:07:53-0800 lvl=info msg=List       api=signer type=response data=[0x87b9A0dfed8D9632164d886aD5a796599e4257F8]
+t=2023-02-03T01:08:13-0800 lvl=info msg=List       api=signer type=request  metadata="{\"remote\":\"NA\",\"local\":\"NA\",\"scheme\":\"ipc\",\"User-Agent\":\"\",\"Origin\":\"\"}"
+t=2023-02-03T01:08:16-0800 lvl=info msg=List       api=signer type=response data=[]
