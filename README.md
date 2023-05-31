@@ -1,4 +1,4 @@
-<h1 align="center"> Keystone V0 </h1>
+<h1 align="center"> Keystone </h1>
 
 <div align="center">
   <img src="./public/banner.png" style="width: auto; height: 300px;" alt="Image" />
@@ -6,13 +6,19 @@
 
 ---
 
-Keystone V0 is an OP Stack chain with game tick and ECS built _into_ the chain. Compared with writing ECS state through smart contracts, this enables faster performance for all ECS operations such as querying and state setting. Through custom precompiles, smart contracts can access the underlying ECS chain state. Instead of Solidity, game logic can be written in Go and can be massively parallelized. 
+Keystone V0 is an OP Stack chain with game tick and ECS built _into_ the chain, built for on-chain games. Compared with writing ECS state through smart contracts, this enables faster performance for all ECS operations such as querying and state setting. Through custom precompiles, smart contracts can access the underlying ECS chain state. Instead of Solidity, game logic can be written in Go and can be massively parallelized.
 
 Keystone V0 is an R&D prototype made by Curio on what's possible with alternative execution environments for on-chain games.
 
-To spin up the chain under dev mode:
-Devmode spins up state quickly in an in-memory KV store that's not persistent
-To launch under dev mode run the following scripts:
+Notable files
+
+- [`engine`](./engine) - Base ECS data structures
+- [`game`](./game) - Game specific logic and data structures
+
+Modifications made to op-stack mostly in: statedb.go, worker.go
+
+Devmode spins up the chain using in-memory state for testing.
+To start under dev mode:
 
 ```
 scripts/launch.sh
@@ -23,6 +29,10 @@ To prefund accounts in prefundDevAccounts.json:
 ```
 scripts/prefund.sh
 ```
+
+BSL license present in [`license`](./license) folder.
+
+---
 
 Official Golang execution layer implementation of the Ethereum protocol.
 
