@@ -1,4 +1,4 @@
-package astar
+package pathfinder
 
 import (
 	"container/heap"
@@ -61,7 +61,7 @@ func Path(from, to Pather) (path []Pather, distance float64, found bool) {
 		return
 	}
 
-	if SamePos(Pos{X: int64(startPos.X), Y: int64(startPos.Y)}, Pos{X: int64(toPos.X), Y: int64(toPos.Y)}) {
+	if SamePos(Pos{X: startPos.X, Y: startPos.Y}, Pos{X: toPos.X, Y: toPos.Y}) {
 		return
 	}
 
@@ -146,7 +146,7 @@ func AstarPathfinder(start, end Pos, worldMap World) (path []Pather, distance fl
 		return
 	}
 
-	if SamePos(Pos{X: int64(startPos.X), Y: int64(startPos.Y)}, Pos{X: int64(toPos.X), Y: int64(toPos.Y)}) {
+	if SamePos(Pos{X: startPos.X, Y: startPos.Y}, Pos{X: toPos.X, Y: toPos.Y}) {
 		return
 	}
 
@@ -183,7 +183,6 @@ func AstarPathfinder(start, end Pos, worldMap World) (path []Pather, distance fl
 				return p, current.cost, true
 
 			}
-
 		}
 
 		for _, neighbor := range current.pather.PathNeighbors(cacheLayer) {
@@ -205,8 +204,12 @@ func AstarPathfinder(start, end Pos, worldMap World) (path []Pather, distance fl
 			}
 		}
 	}
-
 }
+
+var (
+	EmptySlotSymbol = "."
+	ObstacleSymbol  = "X"
+)
 
 // TODO: make this more efficient
 func ConstructMap2dArray(width int, height int, obstacleDensity float64) [][]string {
@@ -217,7 +220,7 @@ func ConstructMap2dArray(width int, height int, obstacleDensity float64) [][]str
 	for i := 0; i < height; i++ {
 		row := []string{}
 		for j := 0; j < width; j++ {
-			row = append(row, ".")
+			row = append(row, EmptySlotSymbol)
 		}
 		world = append(world, row)
 	}
@@ -229,7 +232,7 @@ func ConstructMap2dArray(width int, height int, obstacleDensity float64) [][]str
 		x := rand.Intn(width)
 		y := rand.Intn(height)
 
-		world[x][y] = "X"
+		world[x][y] = ObstacleSymbol
 
 	}
 
@@ -384,11 +387,6 @@ func (w World) SetTile(t *Tile, x, y int) {
 func (w World) SetTileWorldRef(x, y int, worldRef World) {
 	tile := w.Tile(x, y)
 
-	// if tile == nil {
-	// 	fmt.Println("tile is nil")
-	// 	return
-	// }
-
 	tile.W = worldRef
 }
 
@@ -528,6 +526,6 @@ func SamePos(pos1 Pos, pos2 Pos) bool {
 }
 
 type Pos struct {
-	X int64 `json:"X"`
-	Y int64 `json:"Y"`
+	X int `json:"X"`
+	Y int `json:"Y"`
 }

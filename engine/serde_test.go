@@ -19,23 +19,3 @@
 // TITLE.
 
 package engine
-
-import (
-	"fmt"
-	"testing"
-)
-
-func TestSerde(t *testing.T) {
-	// test for encoding error
-
-	_, err := EncodeAbiBytesBasedOnDataType(Number, "test")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	_, err = EncodeAbiBytesBasedOnDataType(Bool, 100)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-}

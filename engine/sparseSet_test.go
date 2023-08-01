@@ -35,15 +35,15 @@ func TestSparseSetGeneralOperations(t *testing.T) {
 
 	count := 10_000
 
-	elements := make([]int64, 10_000)
+	elements := make([]int, 10_000)
 
 	a := time.Now()
 	for i := 0; i < count; i++ {
-		set1.Add(int64(i))
+		set1.Add(i)
 
 		// add random element
-		set1.Add(int64(rand.Intn(1_000)))
-		elements[i] = int64(i)
+		set1.Add(rand.Intn(1_000))
+		elements[i] = i
 	}
 
 	setTime := time.Since(a)
@@ -70,7 +70,7 @@ func TestSparseSetDeepCopy(t *testing.T) {
 	itemCount := 100
 
 	for i := 0; i < itemCount; i++ {
-		sparseSet.Add(int64(rand.Intn(1_000)))
+		sparseSet.Add(rand.Intn(1_000))
 	}
 
 	sparseSetCopy := sparseSet.DeepCopy()
@@ -127,4 +127,14 @@ func TestParallelizeDeepcopySparseSet(t *testing.T) {
 
 	fmt.Println("Parallel time: ", time.Since(startTime).Microseconds(), "us")
 	fmt.Println("Total elements: ", sets_to_copy*count)
+}
+
+func CreateAndPopulateSparseSet(count int) SparseSet {
+	set := NewSparseSet()
+
+	for i := 0; i < count; i++ {
+		set.Add(i)
+	}
+
+	return *set
 }

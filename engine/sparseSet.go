@@ -20,50 +20,60 @@
 
 package engine
 
-import "math/rand"
+import (
+	"math/rand"
+	"sync"
+)
 
 var exists = struct{}{}
 
 type SparseSet struct {
 	// array of all elements
-	elements []int64
+	elements []int
 
-	// mapping between element to index position
-	elementIndexMap []int64
+	elementIndexMapMutex sync.Mutex
+	elementIndexMap      map[int]int
 }
 
 func NewSparseSet() *SparseSet {
 	s := &SparseSet{}
 
-	// TODO: we assume a 100k upper ceiling here for number of entities
-	s.elementIndexMap = make([]int64, 100_000)
+	s.elementIndexMapMutex = sync.Mutex{}
+	s.elementIndexMap = make(map[int]int)
 
 	return s
 }
 
-func (s *SparseSet) Add(value int64) {
+func (s *SparseSet) Add(value int) {
 	if s.Contains(value) {
 		return
 	}
 
+	s.elementIndexMapMutex.Lock()
+
 	s.elements = append(s.elements, value)
-	s.elementIndexMap[value] = int64(s.Size() - 1)
+	s.elementIndexMap[value] = s.Size() - 1
+
+	s.elementIndexMapMutex.Unlock()
 }
 
-func (s *SparseSet) Remove(value int64) {
+func (s *SparseSet) Remove(value int) {
 	if !s.Contains(value) {
 		return
 	}
+
+	s.elementIndexMapMutex.Lock()
 
 	indexToRemove := s.elementIndexMap[value]
 	lastElement := s.elements[s.Size()-1]
 	s.elements[indexToRemove] = lastElement
 	s.elementIndexMap[lastElement] = indexToRemove
 
-	s.elementIndexMap[value] = 0
+	delete(s.elementIndexMap, value)
 
 	s.elements = s.elements[:len(s.elements)-1]
 
+	s.elementIndexMapMutex.Unlock()
 }
 
 func (s *SparseSet) Size() int {
@@ -73,12 +83,14 @@ func (s *SparseSet) Size() int {
 	return len(s.elements)
 }
 
-func (s *SparseSet) GetAll() []int64 {
+func (s *SparseSet) GetAll() []int {
+	if s == nil {
+		return []int{}
+	}
 	return s.elements
 }
 
-func (s *SparseSet) Contains(value int64) bool {
-	// null pointer check
+func (s *SparseSet) Contains(value int) bool {
 	if s == nil {
 		return false
 	}
@@ -90,6 +102,7 @@ func (s *SparseSet) Contains(value int64) bool {
 	return s.elementIndexMap[value] != 0 || s.elements[0] == value
 }
 
+// TODO: update. these are legacy methods
 func SetIntersection(set1 *SparseSet, set2 *SparseSet) *SparseSet {
 	// sanity checkers
 	if set1 == nil {
@@ -162,16 +175,16 @@ func (s *SparseSet) DeepCopy() *SparseSet {
 
 }
 
-func CreateAndPopulateSparseSet(count int) SparseSet {
-	set := NewSparseSet()
-
-	for i := 0; i < count; i++ {
-		set.Add(int64(i))
-	}
-
-	return *set
+func (s *SparseSet) GetRandomElement() int {
+	return s.elements[rand.Intn(s.Size()-1)]
 }
 
-func (s *SparseSet) GetRandomElement() int64 {
-	return s.elements[rand.Intn(s.Size()-1)]
+func ArrayToSparseSet(array []int) *SparseSet {
+	set := NewSparseSet()
+
+	for _, element := range array {
+		set.Add(element)
+	}
+
+	return set
 }

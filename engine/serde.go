@@ -21,213 +21,88 @@
 package engine
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
-	"errors"
-	"math/big"
-	"unsafe"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
+	"strconv"
+	"strings"
 )
 
-func EncodeAbiBytesBasedOnDataType(dataType DataType, input interface{}) ([]byte, error) {
-
-	switch dataType {
-	case Number:
-		val, ok := input.(int64)
-		if !ok {
-			return nil, errors.New("Invalid input type for number")
-		}
-
-		res, err := abi.PackUint256(val)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case String:
-		val, ok := input.(string)
-		if !ok {
-			return nil, errors.New("Invalid input type for string")
-		}
-
-		res, err := abi.PackString(val)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case Address:
-		val, ok := input.(string)
-		if !ok {
-			return nil, errors.New("Invalid input type for address")
-		}
-
-		res, err := abi.PackAddress(common.HexToAddress(val))
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case Bool:
-		val, ok := input.(bool)
-		if !ok {
-			return nil, errors.New("Invalid input type for boolean")
-		}
-
-		res, err := abi.PackBool(val)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case Position:
-		val, ok := input.(Pos)
-		if !ok {
-			return nil, errors.New("Invalid input type for position")
-		}
-
-		// first convert to bigInt for ABI conversion
-		bigIntifyPosition := abi.BigIntPos{X: big.NewInt(val.X), Y: big.NewInt(val.Y)}
-
-		res, err := abi.PackPosition(bigIntifyPosition)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	default:
-		return nil, nil
-	}
-}
-
-// TODO: move this to appropriate folder
-// used while interfacing with abi encoded objects usually submitted through smart contracts
-func DecodeAbiBytesToDataType(dataType DataType, data []byte) (any, error) {
-
-	switch dataType {
-
-	case Number:
-		res, err := abi.UnpackUint256(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case String:
-		res, err := abi.UnpackString(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case Position:
-		res, err := abi.AbiDecodePositionFromBytes(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return Pos{X: (res.X).Int64(), Y: (res.Y).Int64()}, nil
-
-	case Address:
-		res, err := abi.UnpackAddress(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	case Bool:
-		res, err := abi.UnpackBool(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-
-	default:
-		return nil, nil
-	}
-}
-
 // TODO: add error handling
-func DecodeBytesBasedOnDataType(dataType DataType, data []byte) any {
+func DecodeBytesBasedOnDataType(dataType DataType, data string) any {
 	switch dataType {
 	case Number:
-		return DecodeInt64AsBytes(data)
+		return DecodeStringToInt(data)
 	case String:
-		return DecodeStringFromBytes(data)
+		return DecodeStringFromString(data)
 	case Position:
-		return DecodePositionFromBytes(data)
+		return DecodePositionFromString(data)
 	case Address:
-		return DecodeStringFromBytes(data)
+		return DecodeStringFromString(data)
 	default:
 		return nil
 	}
 }
 
-func EncodeToBytesBasedOnDataType(dataType DataType, data any) []byte {
+func EncodeToStringBasedOnDataType(dataType DataType, data any) string {
 	switch dataType {
 	case Number:
-		return EncodeInt64AsBytes(data.(int64))
+		switch val := data.(type) {
+		case int:
+			return EncodeIntAsString(val)
+
+		case int64:
+			return EncodeIntAsString(int(val))
+		}
+
+		return ""
 	case String:
-		return EncodeStringToBytes(data.(string))
+		return EncodeStringToString(data.(string))
 	case Position:
-		return EncodePositionAsBytes(data.(Pos))
+		return EncodePositionAsString(data.(Pos))
 	case Address:
-		return EncodeStringToBytes(data.(string))
+		return EncodeStringToString(data.(string))
 	default:
-		return nil
+		return ""
 	}
 }
 
-func EncodeInt64AsBytes(num int64) []byte {
-	buf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(buf, num)
-	b := buf[:n]
-
-	return b
+func EncodeIntAsString(num int) string {
+	return strconv.Itoa(num)
 }
 
-func DecodeInt64AsBytes(bytes []byte) int64 {
-	num, _ := binary.Varint(bytes)
+func DecodeStringToInt(str string) int {
+	num, _ := strconv.Atoi(str)
 	return num
 }
 
-func EncodeStringToBytes(str string) []byte {
-	return []byte(str)
+func EncodeStringToString(str string) string {
+	return str
 }
 
-func DecodeStringFromBytes(bytes []byte) string {
-	return string(bytes)
+func DecodeStringFromString(str string) string {
+	return str
 }
 
-func EncodePositionAsBytes(pos Pos) []byte {
-	reqBodyBytes := new(bytes.Buffer)
-	json.NewEncoder(reqBodyBytes).Encode(pos)
-	return reqBodyBytes.Bytes() // this is the []byte
+func EncodePositionAsString(pos Pos) string {
+	x := strconv.Itoa(pos.X)
+	y := strconv.Itoa(pos.Y)
+	return x + "," + y
 }
 
-func DecodePositionFromBytes(bytes []byte) Pos {
-	var pos Pos
-	json.Unmarshal(bytes, &pos)
-	return pos
-}
+// TODO: add proper error handling
+func DecodePositionFromString(str string) Pos {
 
-func ByteArrayToInt(arr []byte) int64 {
-	val := int64(0)
-	size := len(arr)
-	for i := 0; i < size; i++ {
-		*(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&val)) + uintptr(i))) = arr[i]
+	parts := strings.Split(str, ",")
+	if len(parts) != 2 {
 	}
-	return val
+
+	x, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return Pos{}
+	}
+
+	y, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return Pos{}
+	}
+
+	return Pos{X: x, Y: y}
 }

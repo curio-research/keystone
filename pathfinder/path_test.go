@@ -1,4 +1,4 @@
-package astar
+package pathfinder
 
 // path_test.go contains the high level tests without the testing
 // implementation.  testPath is used to check the calculated path distance is

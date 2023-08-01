@@ -1,1 +1,0 @@
-npx ts-node ./scripts/prefund.ts

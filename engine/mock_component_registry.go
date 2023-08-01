@@ -20,74 +20,16 @@
 
 package engine
 
-// ------------------------
-// sample component registry
-// (used for testing)
-// ------------------------
-
+// mock list of components
 var (
-	TargetPositionComp = "TargetPosition"
-	PositionComp       = "Position"
-	TagComp            = "Tag"
-	TerrainComp        = "Terrain"
-	Health             = "Health"
-	MaxHealth          = "MaxHealth"
-	ProductionOwner    = "ProductionOwner"
-	StartTime          = "StartTime"
-	Owner              = "Owner"
-	AddressComp        = "Address"
+	TargetPositionComp = NewComponent[Pos]("TargetPosition", true)
+	PositionComp       = NewComponent[Pos]("Position", true)
+	Tag                = NewComponent[string]("Tag", true)
+	Terrain            = NewComponent[int]("Terrain", true)
+	HealthComp         = NewComponent[int]("HealthComp", true)
+	MaxHealthComp      = NewComponent[int]("MaxHealthComp", true)
+	ProductionOwner    = NewComponent[int]("ProductionOwner", true)
+	StartTime          = NewComponent[int]("StartTime", true)
+	Owner              = NewComponent[int]("Owner", true)
+	AddressComp        = NewComponent[string]("Address", true)
 )
-
-// create a list of component registrations based on the above components
-var mockComponentList = []ComponentRegistration{
-	{
-		Name:                       PositionComp,
-		Type:                       Position,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       TargetPositionComp,
-		Type:                       Position,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       TagComp,
-		Type:                       String,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       TerrainComp,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       Health,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       MaxHealth,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       ProductionOwner,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       StartTime,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       Owner,
-		Type:                       Number,
-		ShouldStoreValueToEntities: true,
-	},
-	{
-		Name:                       AddressComp,
-		Type:                       Address,
-		ShouldStoreValueToEntities: true,
-	},
-}
