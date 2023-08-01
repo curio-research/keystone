@@ -11,6 +11,9 @@ Keystone is a rollup framework in development that powers high performance oncha
 
 In this release, we're showcasing the on-going entity-component-system based engine that will power the bulk of the game logic in keystone sequencers. The client is built in Unity.
 
+- `engine` - ECS implementation
+- `server` - Game logic
+
 Some features we're excited to bring alive:
 
 - EVM execution: keystone will interoperate between its ecs engine and evm through precompiles
