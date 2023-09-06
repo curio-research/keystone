@@ -207,8 +207,11 @@ func AstarPathfinder(start, end Pos, worldMap World) (path []Pather, distance fl
 }
 
 var (
+	// mark that the grid space is traversable
 	EmptySlotSymbol = "."
-	ObstacleSymbol  = "X"
+
+	// mark that the grid space is not traversable
+	ObstacleSymbol = "X"
 )
 
 // TODO: make this more efficient

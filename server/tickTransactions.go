@@ -38,21 +38,6 @@ type TickTransaction struct {
 	Payload any `json:"payload"`
 }
 
-// add a player request to the player world state
-func (ctx *EngineCtx) AddTickTransaction(functionName string, tick int, payload any) {
-	ctx.TickTransactionLock.Lock()
-	defer ctx.TickTransactionLock.Unlock()
-
-	newRequest := TickTransaction{
-		GameId:       ctx.GameId,
-		FunctionName: functionName,
-		Tick:         tick,
-		Payload:      payload,
-	}
-
-	ctx.TickTransactionsQueue = append(ctx.TickTransactionsQueue, newRequest)
-}
-
 func (ctx *EngineCtx) CopyClearTickTransactions() TickTransactions {
 	ctx.TickTransactionLock.Lock()
 	defer ctx.TickTransactionLock.Unlock()
@@ -100,6 +85,7 @@ func DeserializeTickTransactionsToBytes(rawRequests [][]byte) (TickTransactions,
 	return res, nil
 }
 
+// save to the data availability layer
 func PublishTickTransactions(ctx *EngineCtx) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -118,6 +104,7 @@ type GetTickTransactionsRequest struct {
 	EndTick   int
 }
 
+// will be used by validators to reconstruct state
 func GetTickTransactions(ctx *EngineCtx) gin.HandlerFunc {
 	return func(c *gin.Context) {
 

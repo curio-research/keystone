@@ -1,25 +1,29 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/curio-research/go-backend/engine"
+	"github.com/curio-research/keystone/keystone/ecs"
 	"github.com/gorilla/websocket"
 )
 
 const (
-	Diff            = "DIFF"
 	ReadBufferSize  = 1024
 	WriteBufferSize = 1024
-	StreamInterval  = 200 * time.Millisecond
+	StreamInterval  = 100 * time.Millisecond
+)
+
+// event types
+const (
+	Diff = "DIFF"
 )
 
 type StreamServer struct {
@@ -35,20 +39,49 @@ type StreamServer struct {
 
 type UpdatePackets []UpdatePacket
 
-// update packet container a group of ecs updates with additional metadata helping the client
+// update packet container a group of ecs updates with additional metadata
+// that helps clients create the scene
+
 type UpdatePacket struct {
 	// array of ECS packets that need to be broadcasted to clients
-	EcsUpdates []engine.ECSData `json:"ecsUpdates"`
+	EcsUpdates []ecs.ECSUpdate `json:"ecsUpdates"`
 
-	// id of package
+	// id of package that corresponds with the HTTP requests's returned UUID (similar to a transaction hash)
 	Uuid string `json:"uuid"`
 
 	// timestamp
 	Time int64 `json:"time"`
 
-	// TODO: to be filled into the future
-	// ex: it might contain instructions for the client to understand events like "Tower{1}-explode-fireball"
-	Instructions any `json:"instructions"`
+	// error message string returned from a request
+	Message string `json:"message"`
+
+	// metadata that helps clients determine what to do with state data
+	ClientEvents ClientEvents `json:"clientEvents"`
+}
+
+type ClientEvents []ClientEvent
+
+// used once per-request
+type EventCtx struct {
+	ClientEvents ClientEvents
+}
+
+// adds a client event to the event context
+func (e *EventCtx) EmitEvent(eventType string, data any) {
+	e.ClientEvents = append(e.ClientEvents, ClientEvent{
+		Type: eventType,
+		Data: data,
+	})
+}
+
+func BBB() {
+	fmt.Println(1)
+}
+
+type ClientEvent struct {
+	Type string `json:"type"`
+
+	Data any `json:"data"`
 }
 
 // Start WS Server
@@ -67,7 +100,7 @@ func NewStreamServer() (*StreamServer, error) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Upgrade normal http protocl to websocket
+		// Upgrade normal http protocol to websocket
 		websocket, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
@@ -106,8 +139,8 @@ func NewStreamServer() (*StreamServer, error) {
 }
 
 type WSMessage struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
+	EventType string `json:"type"`
+	Payload   any    `json:"message"`
 }
 
 func (ws *StreamServer) publishMessage() {
@@ -122,29 +155,22 @@ func (ws *StreamServer) publishMessage() {
 
 				packetsToPublish := ws.FetchClearDataPackets()
 
-				if len(packetsToPublish) > 0 {
+				if len(packetsToPublish) == 0 {
+					continue
+				}
 
-					dataPacketsStr, err := json.Marshal(packetsToPublish)
+				payload := &WSMessage{
+					EventType: Diff,
+					Payload:   packetsToPublish}
 
+				for conn := range ws.Conns {
+
+					// TODO: in the future encrypt string
+					err := conn.WriteJSON(payload)
 					if err != nil {
 						log.Println(err)
-						return
 					}
 
-					diff := &WSMessage{Diff, string(dataPacketsStr)}
-					diffStr, parseDiffError := json.Marshal(diff)
-
-					if parseDiffError != nil {
-						log.Println(parseDiffError)
-						return
-					}
-
-					for conn := range ws.Conns {
-						if err := conn.WriteMessage(1, []byte(string(diffStr))); err != nil {
-							log.Println(err)
-							return
-						}
-					}
 				}
 
 			case <-quit:
@@ -157,15 +183,35 @@ func (ws *StreamServer) publishMessage() {
 
 // this is similar to broadcasting events in Solidity.
 // we broadcast state changes to client along with additional useful metadata, for clients, data pipelines down the line, etc
-func (ws *StreamServer) PublishStateChanges(ecsUpdates engine.ECSUpdateArray, uuid string) {
-	if ecsUpdates == nil || len(ecsUpdates) == 0 {
+func (ws *StreamServer) PublishStateChanges(ecsUpdates ecs.ECSUpdateArray, uuid string, message string, clientEvents ClientEvents) {
+	if ws == nil {
 		return
 	}
 
 	ws.DataPacketsMutex.Lock()
 	defer ws.DataPacketsMutex.Unlock()
 
-	ws.DataPackets = append(ws.DataPackets, UpdatePacket{EcsUpdates: ecsUpdates, Uuid: uuid, Time: time.Now().Unix()})
+	ws.DataPackets = append(ws.DataPackets, UpdatePacket{
+		EcsUpdates:   ecsUpdates,
+		Uuid:         uuid,
+		Time:         time.Now().Unix(),
+		Message:      message,
+		ClientEvents: clientEvents,
+	})
+}
+
+// TODO: test this
+func filterEcsUpdatesWithoutLocal(tableUpdates ecs.ECSUpdateArray) ecs.ECSUpdateArray {
+	// if the component starts with the word local, then filter it out
+	filteredUpdates := ecs.ECSUpdateArray{}
+	for _, ecsUpdate := range tableUpdates {
+		// TODO: local prefix
+		if !strings.HasPrefix(ecsUpdate.Table, "local") {
+			filteredUpdates = append(filteredUpdates, ecsUpdate)
+		}
+	}
+
+	return filteredUpdates
 }
 
 func (ws *StreamServer) FetchClearDataPackets() []UpdatePacket {

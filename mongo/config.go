@@ -10,6 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var MongoDatabaseName string = "test-db"
+
 func ConnectToMongoDB() (*mongo.Client, error) {
 	err := godotenv.Load()
 	if err != nil {

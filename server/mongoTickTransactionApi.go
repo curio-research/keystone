@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
-	mongoHelper "github.com/curio-research/go-backend/mongo"
-	"github.com/curio-research/go-backend/server/models"
+	mongoHelper "github.com/curio-research/keystone/keystone/mongo"
 	"github.com/fatih/color"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// TODO: remove this whole thing
 
 // mongodb implementation of the tick transaction data availability layer
 type MongoDBTickTransactionAPI struct {
@@ -29,10 +30,10 @@ func (api *MongoDBTickTransactionAPI) UploadTickTransactions(tickTransactions Ti
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	tickTransactionModels := []models.TickTransactionModel{}
+	tickTransactionModels := []mongoHelper.TickTransactionModel{}
 
 	for _, tickTransactions := range tickTransactions {
-		tickTransactionModels = append(tickTransactionModels, models.TickTransactionModel{
+		tickTransactionModels = append(tickTransactionModels, mongoHelper.TickTransactionModel{
 			GameId:       tickTransactions.GameId,
 			Sender:       tickTransactions.Sender,
 			Signature:    tickTransactions.Signature,
@@ -65,7 +66,7 @@ func (api *MongoDBTickTransactionAPI) DownloadTickTransactions(gameId string, st
 
 	// Iterate through the results and do something with the matching documents
 	for cur.Next(context.Background()) {
-		var model models.TickTransactionModel
+		var model mongoHelper.TickTransactionModel
 		if err := cur.Decode(&model); err != nil {
 			return nil, err
 		}
