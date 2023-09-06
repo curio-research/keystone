@@ -13,9 +13,7 @@ type EngineCtx struct {
 	// unique game ID
 	GameId string
 
-	// pause game world
-	// 0: paused
-	// 1: live
+	// is game world live
 	IsLive bool
 
 	// is the game state is being restored from db
@@ -38,10 +36,10 @@ type EngineCtx struct {
 	TickTransactionsQueue TickTransactions
 
 	// TODO: [WIP] Data availability API
-	TickTransactionApi TickTransactionApi
+	TickTransactionHandler ITickTransactionHandler
 
 	// interface that handles all interactions for saving transactions
-	SaveDatabase ISaveDatabase
+	SaveStateHandler ISaveState
 
 	// "dev", "debug", "prod"
 	// TODO: refactor this to constants
@@ -50,13 +48,13 @@ type EngineCtx struct {
 	// error log for printing when testing
 	ErrorLog []ErrorLog
 
-	// TODO: add
 	StateUpdatesMutex sync.Mutex
 
 	// state updates
 	PendingStateUpdatesToSave []ecs.ECSUpdate
 }
 
+// for debugging
 type ErrorLog struct {
 	Tick    int
 	Message string

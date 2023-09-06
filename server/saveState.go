@@ -4,21 +4,20 @@ import (
 	"time"
 )
 
-// TODO: get back get state route
+// TODO: add back get state route
 type DownloadWorldRequest struct {
 	Components []string `json:"components"`
 }
 
 // general interface to implement
-type ISaveDatabase interface {
+type ISaveState interface {
 	// save game updates to database
-	SaveUpdatesToDB(ctx *EngineCtx)
+	SaveState(ctx *EngineCtx)
 
-	RestoreStateFromDB(ctx *EngineCtx, gameId string)
+	RestoreState(ctx *EngineCtx, gameId string)
 }
 
 // game loop that triggers the save world state
-// set up a game tick
 func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
 	tickerTime := time.Duration(1_000) * time.Millisecond
 	ticker := time.NewTicker(tickerTime)
@@ -35,9 +34,9 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
 				if ctx.IsLive {
 					tick++
 
-					if tick%saveInterval == 0 {
-						if saveInterval != 0 {
-							ctx.SaveDatabase.SaveUpdatesToDB(ctx)
+					if saveInterval != 0 {
+						if tick%saveInterval == 0 {
+							ctx.SaveStateHandler.SaveState(ctx)
 						}
 					}
 
