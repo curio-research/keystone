@@ -2,13 +2,10 @@ package server
 
 import (
 	"encoding/json"
-	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 // bring your own implementation on how to submit and retrieve data to the DA layer!
-type TickTransactionApi interface {
+type ITickTransactionHandler interface {
 	UploadTickTransactions(tickTransactions TickTransactions) error
 
 	// startTick: inclusive
@@ -21,23 +18,24 @@ type TickTransactions []TickTransaction
 // player requests (aka tick transactions) are objects that need to be made available such that
 // anyone can recreate the state
 type TickTransaction struct {
-	GameId string `json:"gameId"`
+	GameId string
 
 	// likely some sort of address
-	Sender string `json:"sender"`
+	Sender string
 
 	// likely a cryptographic signature to verify sender
-	Signature string `json:"signature"`
+	Signature string
 
 	// name of function (tick function for now) being triggered
-	FunctionName string `json:"functionName"`
+	FunctionName string
 
-	Tick int `json:"tick"`
+	Tick int
 
 	// payload data struct
-	Payload any `json:"payload"`
+	Payload any
 }
 
+// copy transactions and clear
 func (ctx *EngineCtx) CopyClearTickTransactions() TickTransactions {
 	ctx.TickTransactionLock.Lock()
 	defer ctx.TickTransactionLock.Unlock()
@@ -53,6 +51,7 @@ func (ctx *EngineCtx) CopyClearTickTransactions() TickTransactions {
 	return newRequests
 }
 
+// serialize to bytes
 func (req TickTransactions) Serialize() ([][]byte, error) {
 	res := [][]byte{}
 
@@ -68,6 +67,7 @@ func (req TickTransactions) Serialize() ([][]byte, error) {
 	return res, nil
 }
 
+// deserialize from bytes to array
 func DeserializeTickTransactionsToBytes(rawRequests [][]byte) (TickTransactions, error) {
 	res := TickTransactions{}
 
@@ -83,40 +83,4 @@ func DeserializeTickTransactionsToBytes(rawRequests [][]byte) (TickTransactions,
 	}
 
 	return res, nil
-}
-
-// save to the data availability layer
-func PublishTickTransactions(ctx *EngineCtx) gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		transactions := ctx.CopyClearTickTransactions()
-
-		ctx.TickTransactionApi.UploadTickTransactions(transactions)
-
-		c.JSON(http.StatusOK, CreateBasicResponseObjectWithData("", transactions))
-
-	}
-}
-
-type GetTickTransactionsRequest struct {
-	GameId    string
-	StartTick int
-	EndTick   int
-}
-
-// will be used by validators to reconstruct state
-func GetTickTransactions(ctx *EngineCtx) gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		req := GetTickTransactionsRequest{}
-		DecodeRequestBody(c, &req)
-
-		transactions, err := ctx.TickTransactionApi.DownloadTickTransactions(req.GameId, req.StartTick, req.EndTick)
-
-		if err != nil {
-			c.JSON(http.StatusOK, CreateBasicResponseObjectWithData("", transactions))
-		}
-
-		c.JSON(http.StatusOK, CreateBasicResponseObjectWithData("", transactions))
-	}
 }

@@ -347,12 +347,14 @@ type ECSUpdateArray []ECSUpdate
 
 type ECSUpdate struct {
 	// "op codes" that represent what type of operation it is
-	OP     string      `json:"op"`
+	OP string `json:"op"`
+
 	Entity int         `json:"entity"`
 	Table  string      `json:"table"`
 	Value  interface{} `json:"value"`
 }
 
+// available op codes to indicate what type of update it is
 var (
 	// key indicating that the entity is being removed
 	RemovalOP = "removal"

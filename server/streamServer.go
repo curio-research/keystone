@@ -74,10 +74,6 @@ func (e *EventCtx) EmitEvent(eventType string, data any) {
 	})
 }
 
-func BBB() {
-	fmt.Println(1)
-}
-
 type ClientEvent struct {
 	Type string `json:"type"`
 
