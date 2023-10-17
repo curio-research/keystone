@@ -2,12 +2,13 @@ package server
 
 import "github.com/gin-gonic/gin"
 
-func DecodeRequestBody(c *gin.Context, req any) any {
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+func DecodeRequestBody[T any](c *gin.Context) (T, error) {
+	var res T
+	if err := c.ShouldBindJSON(&res); err != nil {
+		return res, err
 	}
 
-	return req
+	return res, nil
 }
 
 func CreateBasicResponseObject(requestUuid string) interface{} {

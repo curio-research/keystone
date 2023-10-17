@@ -1,34 +1,16 @@
 package server
 
-import (
-	"github.com/curio-research/keystone/keystone/ecs"
-)
+// ------------------------------------
+// broadcasts events to client
+// 1) state updates (not used in production right now for game)
+// 2) user defined events
+// ------------------------------------
 
-// broadcast state update messages to clients
-func BroadcastMessage(w *EngineCtx, worldWithEcsChanges *ecs.GameWorld, jobId int, message string, clientEvents ClientEvents) {
-	stateChanges := filterEcsUpdatesWithoutLocal(worldWithEcsChanges.TableUpdates)
+// calls the game-defined implementation of the broadcast interface
 
-	if w.Mode == "debug" {
-		if message != "" {
-			w.ErrorLog = append(w.ErrorLog, ErrorLog{
-				Tick:    w.Ticker.TickNumber,
-				Message: message,
-			})
-		}
-	}
-
-	if len(stateChanges) == 0 && message == "" && clientEvents == nil {
+func BroadcastMessage(ctx *EngineCtx, clientEvents []ClientEvent) {
+	if ctx.SystemBroadcastHandler == nil {
 		return
 	}
-
-	w.Stream.PublishStateChanges(stateChanges, GetJobIdUuid(w.World, jobId), message, clientEvents)
-}
-
-func GetJobIdUuid(w *ecs.GameWorld, jobId int) string {
-	if jobId == 0 {
-		return ""
-	}
-
-	job := JobTable.Get(w, jobId)
-	return job.TickUuid
+	ctx.SystemBroadcastHandler.BroadcastMessage(ctx, clientEvents)
 }

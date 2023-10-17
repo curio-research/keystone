@@ -14,12 +14,11 @@ import (
 
 // Speeds up aggregate ~4x
 func TestPathfindingNew(t *testing.T) {
-
 	// construct new map
 	gameMap := ConstructMap2dArray(102, 102, 0.1)
 
 	gameMapCopy := DeepCopy2DArr(gameMap)
-	worldMap := ConstructWorldNew(gameMapCopy)
+	worldMap := ConstructWorldNew(gameMapCopy, false)
 
 	wg := sync.WaitGroup{}
 	a := time.Now()

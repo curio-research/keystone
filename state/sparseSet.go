@@ -1,4 +1,4 @@
-package ecs
+package state
 
 import (
 	"math/rand"
@@ -72,6 +72,9 @@ func (s *SparseSet) GetAll() []int {
 }
 
 func (s *SparseSet) Contains(value int) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s == nil {
 		return false
 	}

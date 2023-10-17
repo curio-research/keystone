@@ -475,13 +475,19 @@ func ParseWorld(input string) World {
 	return w
 }
 
-func ConstructWorldNew(input [][]string) World {
+// Constructs new World for pathfinding.
+// Note: ignoreObstacles is false by default, and true only for planes and other obstacle-ignoring units
+func ConstructWorldNew(input [][]string, ignoreObstacles bool) World {
 	w := World{}
 	for i, row := range input {
 		for j, element := range row {
 			kind, ok := TerrainMap[element]
 			if !ok {
 				kind = KindBlocker
+			}
+
+			if ignoreObstacles {
+				kind = KindPlain
 			}
 
 			w.SetTile(&Tile{
