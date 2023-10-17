@@ -12,8 +12,10 @@ import (
 // creates a corresponding request from a Gin request to user
 func CreateRequestForTick[T any](ctx *EngineCtx) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req T
-		DecodeRequestBody(c, &req)
+		req, err := DecodeRequestBody[T](c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, "Invalid request body")
+		}
 
 		// if the state is being restored, return an error
 		if ctx.IsRestoringState {
@@ -32,29 +34,20 @@ func CreateRequestForTick[T any](ctx *EngineCtx) gin.HandlerFunc {
 
 		reqStr, _ := SerializeRequestToString(req)
 
-		tick := ctx.Ticker.TickNumber
+		tick := ctx.GameTick.TickNumber + 1
+		AddSystemTransaction(ctx.World, tick, reflect.TypeOf(req).String(), reqStr, "", false)
 
 		requestUuid := uuid.New().String()
-
-		AddTickJob(ctx.World, tick, reflect.TypeOf(req).String(), reqStr, "", requestUuid)
-
-		// TODO: Re-enable this at some point
-		// ctx.AddTickTransaction(reflect.TypeOf(req).String(), tick, reqStr)
-
 		c.JSON(http.StatusOK, CreateBasicResponseObject(requestUuid))
 	}
 }
 
 // decode a string
-func DecodeJobData[T any](ctx *EngineCtx, jobId int) T {
-	job := JobTable.Get(ctx.World, jobId)
+func DecodeTxData[T any](ctx *EngineCtx, transactionId int) T {
+	transaction := TransactionTable.Get(ctx.World, transactionId)
 
 	var req T
-	json.Unmarshal([]byte(job.TickDataString), &req)
+	json.Unmarshal([]byte(transaction.Data), &req)
 
 	return req
-}
-
-type TickJobWithId interface {
-	ID() string
 }

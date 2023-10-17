@@ -1,7 +1,8 @@
-package ecs
+package test
 
 import (
 	"fmt"
+	"github.com/curio-research/keystone/keystone/state"
 	"math/rand"
 	"sync"
 	"testing"
@@ -11,7 +12,7 @@ import (
 func TestSparseSetGeneralOperations(t *testing.T) {
 	fmt.Println("Start test")
 
-	set1 := NewSparseSet()
+	set1 := state.NewSparseSet()
 
 	count := 10_000
 
@@ -45,7 +46,7 @@ func TestSparseSetGeneralOperations(t *testing.T) {
 }
 
 func TestSparseSetDeepCopy(t *testing.T) {
-	sparseSet := NewSparseSet()
+	sparseSet := state.NewSparseSet()
 
 	itemCount := 100
 
@@ -69,7 +70,7 @@ func TestParallelizeDeepcopySparseSet(t *testing.T) {
 	sets_to_copy := 100
 
 	// add to mapping from ID to set
-	sets := make(map[int]SparseSet)
+	sets := make(map[int]state.SparseSet)
 
 	for i := 0; i < sets_to_copy; i++ {
 		tempSet := CreateAndPopulateSparseSet(count)
@@ -109,8 +110,8 @@ func TestParallelizeDeepcopySparseSet(t *testing.T) {
 	fmt.Println("Total elements: ", sets_to_copy*count)
 }
 
-func CreateAndPopulateSparseSet(count int) SparseSet {
-	set := NewSparseSet()
+func CreateAndPopulateSparseSet(count int) state.SparseSet {
+	set := state.NewSparseSet()
 
 	for i := 0; i < count; i++ {
 		set.Add(i)

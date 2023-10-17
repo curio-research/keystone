@@ -2,49 +2,43 @@ package server
 
 import (
 	"time"
-)
 
-// TODO: add back get state route
-type DownloadWorldRequest struct {
-	Components []string `json:"components"`
-}
+	"github.com/curio-research/keystone/keystone/state"
+)
 
 // general interface to implement
 type ISaveState interface {
-	// save game updates to database
-	SaveState(ctx *EngineCtx)
+	SaveState(tableUpdates []state.TableUpdate) error
 
-	RestoreState(ctx *EngineCtx, gameId string)
+	RestoreState(ctx *EngineCtx, gameId string) error
+}
+
+type ISaveTransactions interface {
+	SaveTransactions(ctx *EngineCtx, updates []TransactionSchema) error
+
+	// TODO: hook this up with a CLI for our SDK
+	RestoreStateFromTxs(tickNumber int, gameId string) (*state.GameWorld, error)
 }
 
 // game loop that triggers the save world state
 func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
-	tickerTime := time.Duration(1_000) * time.Millisecond
+	tickerTime := time.Second
+	if saveInterval != 0 {
+		tickerTime = time.Duration(saveInterval) * time.Second
+	}
 	ticker := time.NewTicker(tickerTime)
 
-	quit := make(chan struct{})
-
-	tick := 0 // seconds
-
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
+		for range ticker.C {
+			if ctx.IsLive {
+				// deep copy pending state updates and clear then
+				updatesToPublish := state.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
+				ctx.ClearStateUpdatesToSave()
+				ctx.SaveStateHandler.SaveState(updatesToPublish)
 
-				if ctx.IsLive {
-					tick++
-
-					if saveInterval != 0 {
-						if tick%saveInterval == 0 {
-							ctx.SaveStateHandler.SaveState(ctx)
-						}
-					}
-
-				}
-
-			case <-quit:
-				ticker.Stop()
-				return
+				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
+				ctx.ClearTransactionsToSave()
+				ctx.SaveTransactionsHandler.SaveTransactions(ctx, transactionsToSave)
 			}
 		}
 	}()

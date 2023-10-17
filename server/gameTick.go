@@ -2,15 +2,19 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"time"
 
-	"github.com/curio-research/keystone/keystone/ecs"
+	"github.com/curio-research/keystone/keystone/state"
+	"google.golang.org/protobuf/proto"
 )
 
+// --------------------------- ---------------------------
 // game tick is the heartbeat of a game, processing data per game tick,
 // such as moving troops, battling, regenerating health, and doing some math stuff
+// --------------------------- ---------------------------
 
 type GameTick struct {
 	// the current game tick number
@@ -26,12 +30,12 @@ type GameTick struct {
 type TickSystemFunction func(ctx *EngineCtx) error
 
 type TickSchedule struct {
-	// list of tick job systems that need to be triggered
+	// list of systems that need to be triggered
 	ScheduledTickSystems []TickSystem
 }
 
 type TickSystem struct {
-	// interval for when the job should be triggered (milliseconds)
+	// how fast the game ticks
 	TickInterval int
 
 	// tick system function
@@ -44,110 +48,161 @@ func NewTickSchedule() *TickSchedule {
 	}
 }
 
+// tick interval in milliseconds
 func (s *TickSchedule) AddTickSystem(tickInterval int, tickFunction TickSystemFunction) {
 	s.ScheduledTickSystems = append(s.ScheduledTickSystems, TickSystem{TickInterval: tickInterval, TickFunction: tickFunction})
 }
 
-// system handler type
-type SystemHandler[T any] func(ctx *EngineCtx, jobId int, w *ecs.GameWorld, req T, eventCtx *EventCtx) error
-
-type SystemHandlerNew[T any] func(ctx *TransactionCtx[T]) error
+type ISystemHandler[T any] func(ctx *TransactionCtx[T])
 
 // transaction ctx
 type TransactionCtx[T any] struct {
 	GameCtx *EngineCtx
 
-	JobId int
+	// the transaction entity ID
+	TxId int
 
 	// access world variables through this
-	W *ecs.GameWorld
+	W state.IWorld
 
-	// request parameters
+	// transaction request parameters
 	Req T
 
 	EventCtx *EventCtx
+
+	ErrorReturned bool
 }
 
-// emit event to client
-func (ctx *TransactionCtx[T]) EmitEvent(eventType string, data any) {
+type CMD uint32
+
+func (ctx *TransactionCtx[T]) EmitEvent(cmd CMD, data proto.Message, playerIds []int, isBlocking bool) {
+	command := uint32(cmd)
 	if ctx.EventCtx == nil {
 		return
 	}
 
-	ctx.EventCtx.EmitEvent(eventType, data)
+	var transactionUuidIdentifier uint32
+	if isBlocking {
+		transactionUuidIdentifier = uint32(GetTransactionUuid(ctx.W, ctx.TxId))
+	} else {
+		transactionUuidIdentifier = 0
+	}
+
+	msg, err := NewMessage(0, command, transactionUuidIdentifier, data)
+
+	if err != nil {
+		return
+	}
+
+	ctx.EventCtx.AddEvent(msg, playerIds)
 }
 
-// creates a system from a handler
-func CreateSystemFromRequestHandler[T any](handler SystemHandlerNew[T]) TickSystemFunction {
+// error handling interface
+type ISystemErrorHandler interface {
+	FormatMessage(transactionUuidIdentifier int, errorMessage string) *NetworkMessage
+}
 
+// error broadcasting interface
+type ISystemBroadcastHandler interface {
+	BroadcastMessage(ctx *EngineCtx, clientEvents []ClientEvent)
+}
+
+// emit error
+func (ctx *TransactionCtx[T]) EmitError(errorMessage string, playerIds []int) {
+	if ctx.EventCtx == nil {
+		return
+	}
+
+	jobParamIdentifier := GetTransactionUuid(ctx.W, ctx.TxId)
+
+	msg := ctx.GameCtx.SystemErrorHandler.FormatMessage(jobParamIdentifier, errorMessage)
+
+	ctx.EventCtx.AddEvent(msg, playerIds)
+
+	ctx.ErrorReturned = true
+}
+
+type IMiddleware[T any] func(ctx *TransactionCtx[T], req T) bool // manually emit errors to the transaction context as needed using ctx.EmitError
+
+func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middlewareFunctions ...IMiddleware[T]) TickSystemFunction {
 	return func(ctx *EngineCtx) error {
-		jobIds := GetTickJobsOfType[T](ctx)
+		transactionIds := GetSystemTransactionsOfType[T](ctx)
 
-		for _, jobId := range sort.IntSlice(jobIds) {
-
+		for _, transactionId := range sort.IntSlice(transactionIds) {
 			// create a world to temporarily record ecs changes
-			w := ecs.StartRecordingStateChanges(ctx.World)
-
-			req := DecodeJobData[T](ctx, jobId)
+			ctx.World.ClearTableUpdates()
 
 			// new client events array
 			eventCtx := &EventCtx{}
 
+			req := DecodeTxData[T](ctx, transactionId)
+			worldUpdateBuffer := state.NewWorldUpdateBuffer(ctx.World)
+
 			// create a transaction context for writing logic easier
 			transactionCtx := &TransactionCtx[T]{
 				GameCtx:  ctx,
-				JobId:    jobId,
-				W:        w,
+				TxId:     transactionId,
+				W:        worldUpdateBuffer,
 				Req:      req,
 				EventCtx: eventCtx,
 			}
 
-			err := handler(transactionCtx)
+			callHandler := true
+			for _, middlewareFunc := range middlewareFunctions {
+				prevErrorCount := len(transactionCtx.GameCtx.ErrorLog)
+				ok := middlewareFunc(transactionCtx, req)
+				if !ok {
+					callHandler = false
+					if len(eventCtx.ClientEvents) == prevErrorCount {
+						transactionCtx.EmitError(fmt.Sprintf("req %v did not pass verification", req), nil)
+					}
 
-			// broadcast all ecs updates regardless whether it fails or not
-			errStr := ""
-			if err != nil {
-				errStr = err.Error()
+					break
+				}
 			}
 
-			BroadcastMessage(ctx, w, jobId, errStr, eventCtx.ClientEvents)
+			if callHandler {
+				handler(transactionCtx)
+				if !transactionCtx.ErrorReturned {
+					worldUpdateBuffer.ApplyUpdates() // updates the current world inside with the updates
+				}
+			}
+
+			BroadcastMessage(ctx, eventCtx.ClientEvents)
 		}
 
 		return nil
 	}
 }
 
-func CreateGeneralSystem(handler SystemHandlerNew[any]) TickSystemFunction {
+// general are not triggered by user inputs
+func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 	return func(ctx *EngineCtx) error {
-
-		w := ecs.StartRecordingStateChanges(ctx.World)
+		ctx.World.ClearTableUpdates()
 
 		eventCtx := &EventCtx{}
+
+		worldUpdateBuffer := state.NewWorldUpdateBuffer(ctx.World)
 
 		// create a transaction context for writing logic easier
 		transactionCtx := &TransactionCtx[any]{
 			GameCtx:  ctx,
-			JobId:    -1,
-			W:        w,
+			TxId:     -1,
+			W:        worldUpdateBuffer,
 			Req:      nil,
 			EventCtx: eventCtx,
 		}
 
-		err := handler(transactionCtx)
-
-		errStr := ""
-		if err != nil {
-			errStr = err.Error()
+		handler(transactionCtx)
+		if !transactionCtx.ErrorReturned {
+			worldUpdateBuffer.ApplyUpdates() // updates the current world inside with the updates
 		}
 
 		// add state updates
-		ctx.AddStateUpdatesToSave(w.TableUpdates)
-
-		BroadcastMessage(ctx, w, -1, errStr, eventCtx.ClientEvents)
+		BroadcastMessage(ctx, eventCtx.ClientEvents)
 
 		return nil
 	}
-
 }
 
 func NewGameTick(tickRate int) *GameTick {
@@ -168,18 +223,17 @@ func (g *GameTick) Setup(ctx *EngineCtx, tickSchedule *TickSchedule) {
 		for {
 			select {
 			case <-ticker.C:
-
 				if ctx.IsLive {
+					ctx.AddTransactionsToSave()
+
 					for _, tickSystem := range tickSchedule.ScheduledTickSystems {
 						if ShouldTriggerTick(g.TickNumber, g.TickRateMs, tickSystem.TickInterval) {
 							tickSystem.TickFunction(ctx)
 						}
 					}
+					ctx.AddStateUpdatesToSave()
 
-					// get all jobs in this tick and delete them
-					// TODO: test this performance
-					DeleteAllJobsOfTick(ctx.World, g.TickNumber)
-
+					DeleteAllTicksAtTickNumber(ctx.World, g.TickNumber)
 					g.TickNumber++
 				}
 
@@ -191,36 +245,24 @@ func (g *GameTick) Setup(ctx *EngineCtx, tickSchedule *TickSchedule) {
 	}()
 }
 
-// TODO: [WIP] State sync flow
-// Load empty state from DA layer
-// Download transactions from DA
-// apply those transactions to the state
-// this step will fail. save the previously correctly applied state
-// snapshot state
-
-// given a current state, apply the tick transactions to the state
-// tick transactions are likely supplied within a certain range of ticks
-
+// if the tick happened between the previous and the current tick, we can still trigger it
 func ShouldTriggerTick(tickNumber int, tickRate int, frequencyInMs int) bool {
+	if frequencyInMs == 0 {
+		return false
+	}
 	return tickNumber*tickRate%frequencyInMs < tickRate
 }
 
-// tick all systems
-func ForceTickAllSystems(ctx *EngineCtx) {
-
-	for _, tickSystem := range ctx.Ticker.Schedule.ScheduledTickSystems {
-		tickSystem.TickFunction(ctx)
-	}
-}
-
+// used for tests
 func TickGameSystems(ctx *EngineCtx, tickSchedule *TickSchedule) {
+	ctx.AddTransactionsToSave()
 	for _, tickSystem := range tickSchedule.ScheduledTickSystems {
 		tickSystem.TickFunction(ctx)
 	}
+	ctx.AddStateUpdatesToSave()
 }
 
 func SerializeRequestToString[T any](req T) (string, error) {
-
 	jsonBytes, err := json.Marshal(req)
 	if err != nil {
 		return "", err
@@ -229,60 +271,70 @@ func SerializeRequestToString[T any](req T) (string, error) {
 	return string(jsonBytes), nil
 }
 
-func GetTickJobs(w *ecs.GameWorld, tickType string, tickNumber int) []int {
+// get tick transactions
+func GetTickTransactionsOfType(w *state.GameWorld, transactionType string, tickNumber int) []int {
 
-	query := JobSchema{TickNumber: tickNumber, JobType: tickType}
-	queryFields := []string{"TickNumber", "TickType"}
+	query := TransactionSchema{TickNumber: tickNumber, Type: transactionType}
+	queryFields := []string{"TickNumber", "Type"}
 
-	return JobTable.Filter(w, query, queryFields)
+	return TransactionTable.Filter(w, query, queryFields)
 }
 
-// get tick jobs of type at a current tick number
-func GetTickJobsOfType[T any](ctx *EngineCtx) []int {
+// get tick transactions of type at a current tick number
+func GetSystemTransactionsOfType[T any](ctx *EngineCtx) []int {
 	var t T
-	return GetTickJobs(ctx.World, reflect.TypeOf(t).String(), ctx.Ticker.TickNumber)
-
+	return GetTickTransactionsOfType(ctx.World, reflect.TypeOf(t).String(), ctx.GameTick.TickNumber)
 }
 
-// queues tick job to be executed in the future
-func QueueTickJobAtTime[T any](w *ecs.GameWorld, tickNumber int, jobData T, tickId string) error {
-	var t T
+func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
+	query := TransactionSchema{TickNumber: tickNumber}
+	queryFields := []string{"TickNumber"}
 
-	serializedJobString, err := SerializeRequestToString(jobData)
+	return TransactionTable.Filter(w, query, queryFields)
+}
+
+// queue transactions that are internal (ex: move planning)
+func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data T, tickId string) error {
+	return QueueTxAtTime(w, tickNumber, data, tickId, false)
+}
+
+// queue transactions that are user-initiated aka external
+func QueueTxFromExternal[T any](ctx *EngineCtx, data T, tickId string) error {
+	nextTickId := ctx.GameTick.TickNumber + 1
+	return QueueTxAtTime(ctx.World, nextTickId, data, tickId, true)
+}
+
+// queues tick transactions to be executed in the future
+func QueueTxAtTime(w state.IWorld, tickNumber int, data interface{}, uuid string, isExternal bool) error {
+	serializedStringData, err := SerializeRequestToString(data)
 	if err != nil {
 		return err
 	}
 
-	requestTypeString := reflect.TypeOf(t).String()
+	requestTypeString := reflect.TypeOf(data).String()
 
-	AddTickJob(w, tickNumber, requestTypeString, serializedJobString, tickId, "")
+	TransactionTable.Add(w, TransactionSchema{
+		Type:          requestTypeString,
+		Uuid:          uuid,
+		Data:          serializedStringData,
+		TickNumber:    tickNumber,
+		IsExternal:    isExternal,
+		UnixTimestamp: int(time.Now().UnixNano()),
+	})
 
 	return nil
 }
 
-// queue tick job at the next tick. mainly used for testing
-func QueueTickJob[T any](ctx *EngineCtx, jobData T) error {
-	nextTickId := ctx.Ticker.TickNumber + 1
-	return QueueTickJobAtTime[T](ctx.World, nextTickId, jobData, "")
+// queue system tx at the next tick
+func QueueTransaction(ctx *EngineCtx, data interface{}, isExternal bool) error {
+	nextTickId := ctx.GameTick.TickNumber + 1
+	return QueueTxAtTime(ctx.World, nextTickId, data, "", isExternal)
 }
 
-// queue tick job at the next tick with a specific ID. mainly used for testing
-func QueueTickJobWithId[T any](ctx *EngineCtx, jobData T, tickId string) error {
-	nextTickId := ctx.Ticker.TickNumber + 1
-	return QueueTickJobAtTime[T](ctx.World, nextTickId, jobData, tickId)
-}
+func DeleteAllTicksAtTickNumber(w *state.GameWorld, tickNumber int) {
+	transactionIds := GetTransactionsAtTickNumber(w, tickNumber)
 
-func GetAllJobsAtTick(w *ecs.GameWorld, tickNumber int) []int {
-	query := JobSchema{TickNumber: tickNumber}
-	queryFields := []string{"TickNumber"}
-
-	return JobTable.Filter(w, query, queryFields)
-}
-
-func DeleteAllJobsOfTick(w *ecs.GameWorld, tickNumber int) {
-	jobIds := GetAllJobsAtTick(w, tickNumber)
-
-	for _, jobId := range jobIds {
-		JobTable.RemoveEntity(w, jobId)
+	for _, transactionId := range transactionIds {
+		TransactionTable.RemoveEntity(w, transactionId)
 	}
 }

@@ -1,17 +1,15 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/curio-research/keystone/keystone/ecs"
+	"github.com/gin-gonic/gin"
+
+	"github.com/curio-research/keystone/keystone/state"
 	"github.com/gorilla/websocket"
 )
 
@@ -21,30 +19,34 @@ const (
 	StreamInterval  = 100 * time.Millisecond
 )
 
-// event types
-const (
-	Diff = "DIFF"
-)
-
 type StreamServer struct {
-	// lock for data packets
-	DataPacketsMutex sync.Mutex
+	// lock for protobuf packets
+	ProtoBufPacketsMutex sync.Mutex
 
-	// list of data packets that need to be published by the websocket streamer to clients
-	DataPackets UpdatePackets
+	// list of client message data packets to be sent to client
+	ClientEventsQueue []ClientEvent
+
+	TableUpdatesQueue []state.TableUpdate
 
 	// a pool of connections
-	Conns map[*websocket.Conn]bool // Connection Pool
+	Conns map[*websocket.Conn]bool
+
+	// admin connections Pool
+	AdminConns map[*websocket.Conn]bool
+
+	PlayerIdToConnection map[int]*websocket.Conn
 }
 
-type UpdatePackets []UpdatePacket
+// ProtoBuf Packets
+// type ProtoBufMessagePackets []*NetworkMessage
 
-// update packet container a group of ecs updates with additional metadata
+// update packet container a group of table updates with additional metadata
 // that helps clients create the scene
 
+// TODO: unused. remove in future
 type UpdatePacket struct {
 	// array of ECS packets that need to be broadcasted to clients
-	EcsUpdates []ecs.ECSUpdate `json:"ecsUpdates"`
+	TableUpdates []state.TableUpdate `json:"tableUpdates"`
 
 	// id of package that corresponds with the HTTP requests's returned UUID (similar to a transaction hash)
 	Uuid string `json:"uuid"`
@@ -54,38 +56,40 @@ type UpdatePacket struct {
 
 	// error message string returned from a request
 	Message string `json:"message"`
-
-	// metadata that helps clients determine what to do with state data
-	ClientEvents ClientEvents `json:"clientEvents"`
 }
 
-type ClientEvents []ClientEvent
+type NetworkMessages []*NetworkMessage
+
+type ClientEvent struct {
+	NetworkMessage *NetworkMessage
+	PlayerIds      []int
+}
 
 // used once per-request
 type EventCtx struct {
-	ClientEvents ClientEvents
+	ClientEvents []ClientEvent
 }
 
 // adds a client event to the event context
-func (e *EventCtx) EmitEvent(eventType string, data any) {
-	e.ClientEvents = append(e.ClientEvents, ClientEvent{
-		Type: eventType,
-		Data: data,
-	})
+func (e *EventCtx) AddEvent(msg *NetworkMessage, playerIds []int) {
+	clientMessage := ClientEvent{
+		NetworkMessage: msg,
+		PlayerIds:      playerIds,
+	}
+
+	e.ClientEvents = append(e.ClientEvents, clientMessage)
 }
 
-type ClientEvent struct {
-	Type string `json:"type"`
-
-	Data any `json:"data"`
-}
+type ISocketRequestRouter func(ctx *EngineCtx, requestMsg *NetworkMessage, socketConnection *websocket.Conn)
 
 // Start WS Server
-func NewStreamServer() (*StreamServer, error) {
+func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter, websocketPort int) (*StreamServer, error) {
 	ws := StreamServer{}
 	ws.Conns = make(map[*websocket.Conn]bool)
-	ws.DataPackets = NewUpdatePackets()
-	ws.DataPacketsMutex = sync.Mutex{}
+	ws.ClientEventsQueue = make([]ClientEvent, 0)
+	ws.PlayerIdToConnection = make(map[int]*websocket.Conn)
+	ws.ProtoBufPacketsMutex = sync.Mutex{}
+	ws.AdminConns = make(map[*websocket.Conn]bool)
 
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  ReadBufferSize,
@@ -95,9 +99,8 @@ func NewStreamServer() (*StreamServer, error) {
 		},
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Upgrade normal http protocol to websocket
-		websocket, err := upgrader.Upgrade(w, r, nil)
+	s.GET("/", func(context *gin.Context) {
+		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 		if err != nil {
 			log.Println(err)
 			return
@@ -106,32 +109,59 @@ func NewStreamServer() (*StreamServer, error) {
 		ws.Conns[websocket] = true
 
 		for {
-			_, _, err := websocket.ReadMessage()
+			_, msg, err := websocket.ReadMessage()
+
+			// if the transaction type is "connect to game", then we apply the connection mapping
 
 			if err != nil {
 				delete(ws.Conns, websocket)
 				break
 			}
+
+			// deserialize from bytes
+			requestMsg := NewMessageFromBuffer(msg)
+
+			router(ctx, requestMsg, websocket)
 		}
 	})
 
-	indexerPort := os.Getenv("INDEXER_PORT")
-	if indexerPort == "" {
-		return nil, errors.New("Indexer port not set in .env file")
-	}
+	s.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
+		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		ws.AddAdminConnection(websocket)
 
-	port, err := strconv.Atoi(indexerPort)
-	if err != nil {
-		return nil, errors.New("Indexer port is not a number")
-	}
+		for {
+			_, _, err := websocket.ReadMessage()
 
-	ws.publishMessage()
+			if err != nil {
+				ws.RemoveAdminConnection(websocket)
+				break
+			}
+		}
+	})
+
+	ws.PublishMessage()
 
 	go func() {
-		http.ListenAndServe(fmt.Sprintf("%s%d", ":", port), nil)
+		http.ListenAndServe(fmt.Sprintf("%s%d", ":", websocketPort), s)
 	}()
 
 	return &ws, nil
+}
+
+func (ws *StreamServer) SetPlayerIdToConnection(playerId int, conn *websocket.Conn) {
+	ws.PlayerIdToConnection[playerId] = conn
+}
+
+func (ws *StreamServer) AddAdminConnection(conn *websocket.Conn) {
+	ws.AdminConns[conn] = true
+}
+
+func (ws *StreamServer) RemoveAdminConnection(conn *websocket.Conn) {
+	delete(ws.AdminConns, conn)
 }
 
 type WSMessage struct {
@@ -139,8 +169,7 @@ type WSMessage struct {
 	Payload   any    `json:"message"`
 }
 
-func (ws *StreamServer) publishMessage() {
-
+func (ws *StreamServer) PublishMessage() {
 	ticker := time.NewTicker(StreamInterval)
 	quit := make(chan struct{})
 
@@ -149,25 +178,53 @@ func (ws *StreamServer) publishMessage() {
 			select {
 			case <-ticker.C:
 
-				packetsToPublish := ws.FetchClearDataPackets()
+				packets := ws.FetchEventsFromQueue()
+				ws.ClearClientMessageQueue()
 
-				if len(packetsToPublish) == 0 {
+				tableUpdates := ws.FetchTableUpdatesFromQueue()
+				ws.ClearTableUpdatesQueue()
+
+				tableUpdateBytes, _ := state.EncodeTableUpdateArrayToBytes(tableUpdates)
+
+				// broadcast all state updates to admins
+				for conn := range ws.AdminConns {
+					conn.WriteMessage(websocket.TextMessage, tableUpdateBytes)
+				}
+
+				// loop through players that have playerIds that are negative
+				if len(packets) == 0 {
 					continue
 				}
 
-				payload := &WSMessage{
-					EventType: Diff,
-					Payload:   packetsToPublish}
+				ws.ProtoBufPacketsMutex.Lock()
 
-				for conn := range ws.Conns {
+				// loop through packets and broadcast to user
+				for _, packet := range packets {
 
-					// TODO: in the future encrypt string
-					err := conn.WriteJSON(payload)
-					if err != nil {
-						log.Println(err)
+					// broadcast to all players
+					if packet.PlayerIds == nil {
+						for conn := range ws.Conns {
+							// Send probuf packet data back to client
+
+							buffer := packet.NetworkMessage.ParseToBuffer()
+							conn.WriteMessage(websocket.BinaryMessage, buffer)
+						}
+					} else {
+						// only broadcast to select players
+						for _, playerId := range packet.PlayerIds {
+							conn := ws.PlayerIdToConnection[playerId]
+
+							if conn != nil {
+								buffer := packet.NetworkMessage.ParseToBuffer()
+								conn.WriteMessage(2, buffer)
+							}
+
+						}
 					}
 
 				}
+
+				ws.ProtoBufPacketsMutex.Unlock()
 
 			case <-quit:
 				ticker.Stop()
@@ -179,52 +236,52 @@ func (ws *StreamServer) publishMessage() {
 
 // this is similar to broadcasting events in Solidity.
 // we broadcast state changes to client along with additional useful metadata, for clients, data pipelines down the line, etc
-func (ws *StreamServer) PublishStateChanges(ecsUpdates ecs.ECSUpdateArray, uuid string, message string, clientEvents ClientEvents) {
+// TODO: NOTE: currently we do not broadcast table updates
+func (ws *StreamServer) PublishStateChanges(tableUpdates state.TableUpdateArray, clientEvents []ClientEvent) {
 	if ws == nil {
 		return
 	}
 
-	ws.DataPacketsMutex.Lock()
-	defer ws.DataPacketsMutex.Unlock()
+	ws.ProtoBufPacketsMutex.Lock()
 
-	ws.DataPackets = append(ws.DataPackets, UpdatePacket{
-		EcsUpdates:   ecsUpdates,
-		Uuid:         uuid,
-		Time:         time.Now().Unix(),
-		Message:      message,
-		ClientEvents: clientEvents,
-	})
+	// Example from event to NetworkMessage, should be modified for real use case
+	ws.ClientEventsQueue = append(ws.ClientEventsQueue, clientEvents...)
+
+	// push state updates to queue
+	ws.TableUpdatesQueue = append(ws.TableUpdatesQueue, tableUpdates...)
+
+	ws.ProtoBufPacketsMutex.Unlock()
 }
 
-// TODO: test this
-func filterEcsUpdatesWithoutLocal(tableUpdates ecs.ECSUpdateArray) ecs.ECSUpdateArray {
-	// if the component starts with the word local, then filter it out
-	filteredUpdates := ecs.ECSUpdateArray{}
-	for _, ecsUpdate := range tableUpdates {
-		// TODO: local prefix
-		if !strings.HasPrefix(ecsUpdate.Table, "local") {
-			filteredUpdates = append(filteredUpdates, ecsUpdate)
-		}
-	}
+func (ws *StreamServer) FetchEventsFromQueue() []ClientEvent {
+	ws.ProtoBufPacketsMutex.Lock()
 
-	return filteredUpdates
-}
+	res := []ClientEvent{}
+	res = append(res, ws.ClientEventsQueue...)
 
-func (ws *StreamServer) FetchClearDataPackets() []UpdatePacket {
-	ws.DataPacketsMutex.Lock()
-
-	res := []UpdatePacket{}
-	for _, item := range ws.DataPackets {
-		res = append(res, item)
-	}
-
-	ws.DataPackets = NewUpdatePackets()
-
-	ws.DataPacketsMutex.Unlock()
+	ws.ProtoBufPacketsMutex.Unlock()
 
 	return res
 }
 
-func NewUpdatePackets() UpdatePackets {
-	return UpdatePackets{}
+// clear all messages in the client message queue
+func (ws *StreamServer) ClearClientMessageQueue() {
+	ws.ClientEventsQueue = make([]ClientEvent, 0)
+}
+
+// fetch all table updates from queue
+func (ws *StreamServer) FetchTableUpdatesFromQueue() []state.TableUpdate {
+	ws.ProtoBufPacketsMutex.Lock()
+
+	res := []state.TableUpdate{}
+	res = append(res, ws.TableUpdatesQueue...)
+
+	ws.ProtoBufPacketsMutex.Unlock()
+
+	return res
+}
+
+// clear all table updates from queue
+func (ws *StreamServer) ClearTableUpdatesQueue() {
+	ws.TableUpdatesQueue = make([]state.TableUpdate, 0)
 }
