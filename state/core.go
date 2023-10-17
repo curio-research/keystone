@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// canonical position struct
+// canonical position
 type Pos struct {
 	X int `json:"x"`
 	Y int `json:"y"`
