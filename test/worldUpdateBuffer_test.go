@@ -1,9 +1,10 @@
 package test
 
 import (
-	"github.com/curio-research/keystone/keystone/state"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/curio-research/keystone/state"
+	"github.com/stretchr/testify/assert"
 )
 
 // These tests are structured in this general way:

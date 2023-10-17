@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 	"github.com/gorilla/websocket"
 )
 

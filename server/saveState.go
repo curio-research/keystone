@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 )
 
 // general interface to implement

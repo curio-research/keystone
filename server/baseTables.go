@@ -3,7 +3,7 @@ package server
 import (
 	"strconv"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 )
 
 type TransactionSchema struct {

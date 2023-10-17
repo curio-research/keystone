@@ -2,4 +2,4 @@
 
 ---
 
-Keystone is a rollup SDK for building onchain games hyper focused on performance and composability above all. We believe that in order for onchain games as a whole to meaningfully expand, we must first and foremost deliver unparalleled experience that the average player is familiar with.
+Keystone is a rollup framework in development that powers high performance onchain games, allowing developers to build the types of real-time games like Age of Empires, while combining EVM smart contracts for its composability.

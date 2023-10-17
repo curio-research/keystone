@@ -1,4 +1,4 @@
-module github.com/curio-research/keystone/keystone
+module github.com/curio-research/keystone
 
 go 1.20
 
