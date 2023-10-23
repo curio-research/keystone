@@ -84,7 +84,6 @@ func tearDown(ws *websocket.Conn, server *http.Server) {
 	time.Sleep(time.Second)
 }
 
-// also testing atomic tx
 func TestUpdate(t *testing.T) {
 	e, ws, s, mockErrorHandler := startServer(t)
 	defer tearDown(ws, s)
@@ -93,8 +92,13 @@ func TestUpdate(t *testing.T) {
 
 	playerID := 7
 
-	b1Entity := addBook(w, testBookTitle1, testBookAuthor1, playerID) // entity = 1
-	b2Entity := addBook(w, testBookTitle2, testBookAuthor2, playerID) // entity = 2
+	w.AddEntity()
+
+	b1Entity := 1
+	b2Entity := 2
+
+	addBook(w, testBookTitle1, testBookAuthor1, playerID, b1Entity)
+	addBook(w, testBookTitle2, testBookAuthor2, playerID, b2Entity)
 
 	// error; first update missing entity => none of the books should be updated
 	err := sendWSMsg(ws, playerID, &pb_test.TestBookInfo{
@@ -234,8 +238,8 @@ func TestDeleteAndFilter(t *testing.T) {
 	}
 }
 
-func addBook(w state.IWorld, title, author string, ownerID int) int {
-	return BookTable.Add(w, Book{
+func addBook(w state.IWorld, title, author string, ownerID int, entity int) int {
+	return BookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
 		OwnerID: ownerID,
@@ -287,8 +291,6 @@ func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server
 		}
 	}()
 
-	// e.GameTick.Schedule = server.NewTickSchedule()
-
 	e.GameTick.Schedule.AddTickSystem(1, TestBookSystem)
 	e.GameTick.Schedule.AddTickSystem(1, TestRemoveBookSystem)
 
@@ -301,12 +303,9 @@ func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
-	if ctx.GameCtx.Mode != "dev" {
-		return
-	}
-
 	req := ctx.Req
 	w := ctx.W
+
 	playerID := int(req.GetIdentityPayload().GetPlayerId())
 
 	for _, bookInfo := range req.BookInfos {
@@ -339,6 +338,7 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 			book.Title = bookInfo.Title
 			book.Author = bookInfo.Author
 			BookTable.Set(w, int(bookInfo.Entity), book)
+
 		}
 	}
 })
