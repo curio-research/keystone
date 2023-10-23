@@ -6,18 +6,11 @@ import (
 	"time"
 )
 
-// canonical position struct
-type Pos struct {
-	X int `json:"x"`
-	Y int `json:"y"`
-}
-
 // ---------------------------------------
 //	Table (aka component)
 // ---------------------------------------
 
-// TODO we shouldn't be able to access these internals
-// master table struct that holds table's entities
+// Each table corresponds to a schema (ex: Player, Animal, Tile)
 type Table struct {
 	GameWorld *GameWorld
 
@@ -43,7 +36,7 @@ type Table struct {
 	mu *sync.Mutex
 }
 
-// initialize a new table that points to a world
+// Initialize a new table that points to a world
 func NewTable(w *GameWorld, table ITable) Table {
 	return Table{
 		GameWorld:     w,
@@ -56,7 +49,7 @@ func NewTable(w *GameWorld, table ITable) Table {
 	}
 }
 
-// core table set
+// Core table set function
 func (t *Table) Set(w *GameWorld, entity int, value any) any {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -115,12 +108,13 @@ func (t *Table) Set(w *GameWorld, entity int, value any) any {
 	return value
 }
 
+// Get from table with entity
 func (t *Table) Get(entity int) (any, bool) {
 	val, found := t.EntityToValue[entity]
 	return val, found
 }
 
-// get all entities
+// Get all entities numbers of a table
 func (t *Table) All() []int {
 	return t.Entities.GetAll()
 }
@@ -129,21 +123,18 @@ func (t *Table) All() []int {
 // add entities to world
 // ------------------------------
 
-// add entity to world
-func (w *GameWorld) AddEntityNew() int {
-	entity := w._addEntityNew()
-	return entity
+// Add entity to world. Fetches the next available entity
+func (w *GameWorld) AddEntity() int {
+	return w.entityManager.GetNextAvailableEntity()
 }
 
-func (w *GameWorld) AddSpecificEntityNew(entity int) {
+// Add a specific entity to the world
+// This is useful in debugging and assigning constant entities to constant numbers
+func (w *GameWorld) AddSpecificEntity(entity int) {
 	w.entityManager.Add(entity)
 }
 
-func (w *GameWorld) _addEntityNew() int {
-	return w.entityManager.GetEntity()
-}
-
-// func remove entity from world
+// Remove entity from world
 func (t *Table) RemoveEntity(w *GameWorld, entity int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -173,24 +164,24 @@ func (t *Table) RemoveEntity(w *GameWorld, entity int) {
 	delete(t.EntityToValue, entity)
 }
 
-// the table interface
+// Table interface
 type ITable interface {
 	Name() string
 	Type() reflect.Type
 }
 
-// table accessor type
+// Table accessors are used to access table data with proper types of its schema
 type TableBaseAccessor[T any] struct {
 	TableName  string
 	SchemaType reflect.Type
 }
 
-// create type map registration
+// Create type map registration
 func CreateTypeRegistrationMapping() map[string]reflect.Type {
 	return map[string]reflect.Type{}
 }
 
-// new table accessor
+// Initialize new table accessor
 func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	var s T
 	t := reflect.TypeOf(s)
@@ -210,55 +201,55 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	return base
 }
 
-// get the table name
+// Get the table name
 func (c *TableBaseAccessor[T]) Name() string {
 	return c.TableName
 }
 
-// receive the reflect.Type value
+// Receive the reflect.Type value of a table's schema
 func (c *TableBaseAccessor[T]) Type() reflect.Type {
 	return c.SchemaType
 }
 
-// TODO: return a bool to show when the value is not found / set all table types to be pointers
+// Get object using entity from a world
 func (c *TableBaseAccessor[T]) Get(w IWorld, entity int) T {
 	v, _ := w.Get(entity, c.Name())
 	val, _ := v.(T)
 	return val
 }
 
-// needs to be used to communicate table updates
+// Remove entity from world
 func (c *TableBaseAccessor[T]) RemoveEntity(w IWorld, entity int) int {
 	return w.Delete(entity, c.Name())
 }
 
-// get all entities for this schema
+// Get all entities for a schema table
 func (c *TableBaseAccessor[T]) Entities(w IWorld) []int {
 	return w.Entities(c.Name())
 }
 
-// needs to be used to communicate ecs updates
+// Set entity and its object value to world
 func (c *TableBaseAccessor[T]) Set(w IWorld, entity int, value T) T {
 	w.Set(entity, value, c.Name())
 	return value
 }
 
-// add the object to the world
+// Add the object to the world and returns the assigned entity number
 func (c *TableBaseAccessor[T]) Add(w IWorld, obj T) int {
 	return w.Add(obj, c.Name())
 }
 
-// adds the object to the world with a specific entity ID
+// Adds the object to the world with a specific entity ID
 func (c *TableBaseAccessor[T]) AddSpecific(w IWorld, entity int, obj T) int {
 	return w.AddSpecific(entity, obj, c.Name())
 }
 
-// query by filtering the fields. returns list of entities
+// Query by filtering the fields. returns list of entities
 func (c *TableBaseAccessor[T]) Filter(w IWorld, filter T, fieldNames []string) []int {
 	return w.Filter(filter, fieldNames, c.Name())
 }
 
-// core filter query function
+// Core filter query function
 func (t *Table) Filter(filter any, fieldNames []string) []int {
 	if len(fieldNames) == 0 {
 		return []int{}
@@ -334,14 +325,9 @@ func (t *Table) TableInterface() ITable {
 	}
 }
 
-func isEmptyValue(value reflect.Value) bool {
-	zeroValue := reflect.Zero(value.Type())
-	return reflect.DeepEqual(value.Interface(), zeroValue.Interface())
-}
-
 type TableOperationType string
 
-// available op codes to indicate what type of update it is
+// Available op codes to indicate what type of update it is
 var (
 	// key indicating that the entity is being removed
 	RemovalOP TableOperationType = "removal"
@@ -353,26 +339,26 @@ var (
 	AddEntityOP TableOperationType = "add"
 )
 
-// deep copy table table updates
+// Deep copy table table updates
 func CopyTableUpdates(updates []TableUpdate) []TableUpdate {
 	res := make([]TableUpdate, len(updates))
 	copy(res, updates)
 	return res
 }
 
-// get and clear game world's table updates
+// Get and clear game world's table updates
 func (w *GameWorld) GetAndClearTableUpdates() []TableUpdate {
 	updates := CopyTableUpdates(w.TableUpdates)
 	w.ClearTableUpdates()
 	return updates
 }
 
-// clear game world's table updates
+// Clear game world's table updates
 func (w *GameWorld) ClearTableUpdates() {
 	w.TableUpdates = TableUpdateArray{}
 }
 
-func withEntity(obj interface{}, entity int) interface{} {
+func assignIdFieldInSchemaWithEntity(obj interface{}, entity int) interface{} {
 	val := reflect.ValueOf(obj)
 	if val.Kind() == reflect.Interface || val.Kind() == reflect.Pointer {
 		val = val.Elem()
@@ -383,4 +369,10 @@ func withEntity(obj interface{}, entity int) interface{} {
 
 	newStruct.FieldByName("Id").SetInt(int64(entity))
 	return newStruct.Interface()
+}
+
+// Universal position struct
+type Pos struct {
+	X int `json:"x"`
+	Y int `json:"y"`
 }

@@ -15,7 +15,7 @@ func NewEntityMananger() *EntityManager {
 	}
 }
 
-func (e *EntityManager) GetEntity() int {
+func (e *EntityManager) GetNextAvailableEntity() int {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

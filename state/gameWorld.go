@@ -2,6 +2,8 @@ package state
 
 import "reflect"
 
+// The World Interface
+// Implemented by base world state and buffer world to enable atomic transactions
 type IWorld interface {
 	Add(obj interface{}, name string) int
 	AddSpecific(entity int, obj interface{}, name string) int
@@ -13,8 +15,8 @@ type IWorld interface {
 	GetTableUpdates() TableUpdateArray
 }
 
-// master game world holding entities and tables
-// all data belong to a table (aka component in ECS) that have different schemas (ex: Cat{}, Dog{})
+// Master game world holding entities and tables
+// All data belong to a table (aka component in ECS) that have different schemas (ex: Cat{}, Dog{})
 type GameWorld struct {
 	// current entity nonce and sparse set of entities
 	entityManager *EntityManager
@@ -26,7 +28,7 @@ type GameWorld struct {
 	TableUpdates TableUpdateArray
 }
 
-// initialize new game world
+// Initialize new game world
 func NewWorld() *GameWorld {
 	return &GameWorld{
 		Tables:        make(map[string]Table),
@@ -70,27 +72,27 @@ func (w *GameWorld) GetTableUpdates() TableUpdateArray {
 	return w.TableUpdates
 }
 
-// add single table to game world
+// Add single table to game world
 func (w *GameWorld) AddTable(table ITable) {
 	w.Tables[table.Name()] = NewTable(w, table)
 }
 
-// add multiple tables to the game world
+// Add multiple tables to the game world
 func (w *GameWorld) AddTables(tables ...ITable) {
 	for _, table := range tables {
 		w.AddTable(table)
 	}
 }
 
-// add table updates to game world
+// Add table updates to game world
 func (w *GameWorld) AddTableUpdate(tableUpdate TableUpdate) {
 	w.TableUpdates = append(w.TableUpdates, tableUpdate)
 }
 
-// adds a filled schema to the world. Creates the proper entity, etc.
+// Adds a filled schema to the world. Creates the proper entity, etc.
 func AddToWorld(w *GameWorld, obj any) int {
-	entity := w.AddEntityNew()
-	obj = withEntity(obj, entity)
+	entity := w.AddEntity()
+	obj = assignIdFieldInSchemaWithEntity(obj, entity)
 
 	tableName := reflect.TypeOf(obj).Name()
 	table := w.Tables[tableName]
@@ -100,10 +102,10 @@ func AddToWorld(w *GameWorld, obj any) int {
 
 }
 
-// core add a struct to a world on a specific entity
+// Core add a struct to a world on a specific entity
 func AddToWorldSpecific(w *GameWorld, entity int, obj any) int {
-	w.AddSpecificEntityNew(entity)
-	obj = withEntity(obj, entity)
+	w.AddSpecificEntity(entity)
+	obj = assignIdFieldInSchemaWithEntity(obj, entity)
 
 	tableName := reflect.TypeOf(obj).Name()
 	table := w.Tables[tableName]
