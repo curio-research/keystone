@@ -1,3 +1,3 @@
-# Engine
+# State
 
-ECS-Inspired, Sparse-set based game engine powering high-perf on-chain games
+ECS-Inspired, table based state management for handling game state data

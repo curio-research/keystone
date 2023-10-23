@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 )
 
 // ---------------------------------------

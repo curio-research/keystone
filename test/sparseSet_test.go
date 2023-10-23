@@ -2,11 +2,12 @@ package test
 
 import (
 	"fmt"
-	"github.com/curio-research/keystone/keystone/state"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/curio-research/keystone/state"
 )
 
 func TestSparseSetGeneralOperations(t *testing.T) {

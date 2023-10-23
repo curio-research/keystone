@@ -3,9 +3,9 @@ package test
 import (
 	"testing"
 
-	"github.com/curio-research/keystone/keystone/server"
-	"github.com/curio-research/keystone/keystone/state"
-	"github.com/curio-research/keystone/keystone/utils"
+	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
+	"github.com/curio-research/keystone/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

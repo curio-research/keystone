@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 	"google.golang.org/protobuf/proto"
 )
 

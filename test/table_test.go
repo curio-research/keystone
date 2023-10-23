@@ -1,8 +1,9 @@
 package test
 
 import (
-	"github.com/curio-research/keystone/keystone/state"
 	"testing"
+
+	"github.com/curio-research/keystone/state"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

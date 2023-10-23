@@ -1,9 +1,10 @@
 package test
 
 import (
-	"github.com/curio-research/keystone/keystone/server"
-	"github.com/curio-research/keystone/keystone/state"
 	"sync"
+
+	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 )
 
 var (

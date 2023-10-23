@@ -3,23 +3,26 @@ package server
 import (
 	"strconv"
 
-	"github.com/curio-research/keystone/keystone/state"
+	"github.com/curio-research/keystone/state"
 )
 
 type TransactionSchema struct {
 	Type string
 
-	// a uuid that's sent from the client, which is usd to identify which quest has been satisfieds
+	// a uuid that's sent from the client, which is usd to identify which quest has been satisfied
 	Uuid string
 
+	// data payload serialized to string format
 	Data string
 
+	// tick number when the transaction was to be processed
 	TickNumber int
 
 	Id int
 
 	UnixTimestamp int
 
+	// whether transaction was submitted by player or other systems
 	IsExternal bool
 }
 
