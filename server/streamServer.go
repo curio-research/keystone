@@ -19,6 +19,10 @@ const (
 	StreamInterval  = 100 * time.Millisecond
 )
 
+type ConnectionType struct {
+	SubscribeAllStateUpdates bool
+}
+
 type StreamServer struct {
 	// lock for protobuf packets
 	ProtoBufPacketsMutex sync.Mutex
@@ -29,10 +33,7 @@ type StreamServer struct {
 	TableUpdatesQueue []state.TableUpdate
 
 	// a pool of connections
-	Conns map[*websocket.Conn]bool
-
-	// admin connections Pool
-	AdminConns map[*websocket.Conn]bool
+	Conns map[*websocket.Conn]ConnectionType
 
 	PlayerIdToConnection map[int]*websocket.Conn
 }
@@ -85,11 +86,10 @@ type ISocketRequestRouter func(ctx *EngineCtx, requestMsg *NetworkMessage, socke
 // Start WS Server
 func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter, websocketPort int) (*StreamServer, error) {
 	ws := StreamServer{}
-	ws.Conns = make(map[*websocket.Conn]bool)
+	ws.Conns = make(map[*websocket.Conn]ConnectionType)
 	ws.ClientEventsQueue = make([]ClientEvent, 0)
 	ws.PlayerIdToConnection = make(map[int]*websocket.Conn)
 	ws.ProtoBufPacketsMutex = sync.Mutex{}
-	ws.AdminConns = make(map[*websocket.Conn]bool)
 
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  ReadBufferSize,
@@ -106,12 +106,10 @@ func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter,
 			return
 		}
 
-		ws.Conns[websocket] = true
+		ws.AddConnection(websocket, false)
 
 		for {
 			_, msg, err := websocket.ReadMessage()
-
-			// if the transaction type is "connect to game", then we apply the connection mapping
 
 			if err != nil {
 				delete(ws.Conns, websocket)
@@ -125,19 +123,21 @@ func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter,
 		}
 	})
 
+	// subscribe to all table updates
 	s.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
 		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		ws.AddAdminConnection(websocket)
+
+		ws.AddConnection(websocket, true)
 
 		for {
 			_, _, err := websocket.ReadMessage()
 
 			if err != nil {
-				ws.RemoveAdminConnection(websocket)
+				ws.RemoveConnection(websocket)
 				break
 			}
 		}
@@ -156,12 +156,15 @@ func (ws *StreamServer) SetPlayerIdToConnection(playerId int, conn *websocket.Co
 	ws.PlayerIdToConnection[playerId] = conn
 }
 
-func (ws *StreamServer) AddAdminConnection(conn *websocket.Conn) {
-	ws.AdminConns[conn] = true
+func (ws *StreamServer) AddConnection(conn *websocket.Conn, subscribeToStateUpdates bool) {
+	connection := &ConnectionType{
+		SubscribeAllStateUpdates: subscribeToStateUpdates,
+	}
+	ws.Conns[conn] = *connection
 }
 
-func (ws *StreamServer) RemoveAdminConnection(conn *websocket.Conn) {
-	delete(ws.AdminConns, conn)
+func (ws *StreamServer) RemoveConnection(conn *websocket.Conn) {
+	delete(ws.Conns, conn)
 }
 
 type WSMessage struct {
@@ -186,12 +189,13 @@ func (ws *StreamServer) PublishMessage() {
 
 				tableUpdateBytes, _ := state.EncodeTableUpdateArrayToBytes(tableUpdates)
 
-				// broadcast all state updates to admins
-				for conn := range ws.AdminConns {
-					conn.WriteMessage(websocket.TextMessage, tableUpdateBytes)
+				// broadcast all state updates to subscribers of state data
+				for conn, connectionType := range ws.Conns {
+					if connectionType.SubscribeAllStateUpdates {
+						conn.WriteMessage(websocket.TextMessage, tableUpdateBytes)
+					}
 				}
 
-				// loop through players that have playerIds that are negative
 				if len(packets) == 0 {
 					continue
 				}
