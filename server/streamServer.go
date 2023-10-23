@@ -45,7 +45,7 @@ type StreamServer struct {
 
 // TODO: unused. remove in future
 type UpdatePacket struct {
-	// array of ECS packets that need to be broadcasted to clients
+	// array of table update packets that need to be broadcasted to clients
 	TableUpdates []state.TableUpdate `json:"tableUpdates"`
 
 	// id of package that corresponds with the HTTP requests's returned UUID (similar to a transaction hash)

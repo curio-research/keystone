@@ -42,6 +42,7 @@ type TickSystem struct {
 	TickFunction TickSystemFunction
 }
 
+// Initialize an empty tick schedule. Systems are added to the tick schedule
 func NewTickSchedule() *TickSchedule {
 	return &TickSchedule{
 		ScheduledTickSystems: []TickSystem{},

@@ -12,31 +12,31 @@ import (
 // ---------------------------------------
 
 type EngineCtx struct {
-	// unique game ID
+	// Unique game ID
 	GameId string
 
-	// is game world live
+	// Is the game live
 	IsLive bool
 
-	// is the game state is being restored from db
+	// Is the game state is being restored from db
 	IsRestoringState bool
 
-	// game world containing ECS data
+	// Game world containing table game state
 	World *state.GameWorld
 
-	// game tick aka the heart of the game
+	// Game tick. The heartbeat of your game
 	GameTick *GameTick
 
-	// stream server responsible for broadcasting data such as ecs changes and errors to clients
+	// Stream server for broadcasting data such as table changes and errors to clients
 	Stream *StreamServer
 
-	// transaction queues
+	// Transaction queue
 	TransactionsToSaveLock sync.Mutex
 
-	// transaction - stored in the data availability layer (aka a write ahead log) 🕊
+	// Transactions to be stored in the data availability layer (aka a write ahead log basically)
 	TransactionsToSave []TransactionSchema
 
-	// handles interactions for saving stae
+	// Handles interactions for saving stae
 	SaveStateHandler ISaveState
 
 	SaveTransactionsHandler ISaveTransactions
