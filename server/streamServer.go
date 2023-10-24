@@ -33,9 +33,11 @@ type StreamServer struct {
 	TableUpdatesQueue []state.TableUpdate
 
 	// a pool of connections
-	Conns map[*websocket.Conn]ConnectionType
+	Conns      map[*websocket.Conn]ConnectionType
+	ConnsMutex sync.Mutex
 
-	PlayerIdToConnection map[int]*websocket.Conn
+	PlayerIdToConnection      map[int]*websocket.Conn
+	PlayerIdToConnectionMutex sync.Mutex
 }
 
 // ProtoBuf Packets
@@ -153,18 +155,24 @@ func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter,
 }
 
 func (ws *StreamServer) SetPlayerIdToConnection(playerId int, conn *websocket.Conn) {
+	ws.PlayerIdToConnectionMutex.Lock()
 	ws.PlayerIdToConnection[playerId] = conn
+	ws.PlayerIdToConnectionMutex.Unlock()
 }
 
 func (ws *StreamServer) AddConnection(conn *websocket.Conn, subscribeToStateUpdates bool) {
+	ws.ConnsMutex.Lock()
 	connection := &ConnectionType{
 		SubscribeAllStateUpdates: subscribeToStateUpdates,
 	}
 	ws.Conns[conn] = *connection
+	ws.ConnsMutex.Unlock()
 }
 
 func (ws *StreamServer) RemoveConnection(conn *websocket.Conn) {
+	ws.ConnsMutex.Lock()
 	delete(ws.Conns, conn)
+	ws.ConnsMutex.Unlock()
 }
 
 type WSMessage struct {
