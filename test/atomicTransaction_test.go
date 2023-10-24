@@ -11,7 +11,6 @@ import (
 )
 
 func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
-	t.Error("Bad")
 	ctx, err := initializeTestWorld(TestPersonRequestSystem)
 	require.Nil(t, err)
 
