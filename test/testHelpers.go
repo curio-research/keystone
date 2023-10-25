@@ -15,9 +15,24 @@ var (
 
 	testPos1 = state.Pos{1, 2}
 	testPos2 = state.Pos{5, 6}
+	testPos3 = state.Pos{1, 3}
+	testPos4 = state.Pos{2, 1}
+	testPos5 = state.Pos{2, 2}
+	testPos6 = state.Pos{2, 3}
+	testPos7 = state.Pos{3, 1}
+
+	testEntity1 = 69
+	testEntity2 = 70
+	testEntity3 = 71
+
+	testWallet1 = "wallet1"
+	testWallet2 = "wallet2"
 
 	testAddress1 = "123 Vitalik Drive"
 	testAddress2 = "Home"
+
+	testGameID1 = "game1"
+	testGameID2 = "game2"
 
 	testAge1 = 26
 	testAge2 = 24
@@ -36,26 +51,57 @@ var (
 var testErrMsg = "error in system"
 
 type Person struct {
-	Name     string
-	Age      int
-	Address  string
-	Position state.Pos
-	BookId   int // TODO: if we can automatically solve the linkage that'd be OP
-	Id       int
+	Name       string
+	MainWallet string
+	Age        int
+	Address    string
+	Position   state.Pos `gorm:"embedded"`
+	BookId     int       // TODO: if we can automatically solve the linkage that'd be OP
+	Id         int       `gorm:"primaryKey"`
 }
 
 type Book struct {
 	Title   string
 	Author  string
 	OwnerID int
-	Id      int
+	Id      int `gorm:"primaryKey"`
+}
+
+type Token struct {
+	OriginalOwnerId int
+	OwnerId         int
+	Id              int `gorm:"primaryKey"`
+}
+
+type NestedStruct struct {
+	Name  string
+	Age   int
+	Happy bool
+	Pos   state.Pos `gorm:"embedded"`
+}
+
+type EmbeddedStructSchema struct {
+	Emb NestedStruct `gorm:"embedded"`
+	Id  int          `gorm:"primaryKey"`
 }
 
 var personTable = state.NewTableAccessor[Person]()
 var bookTable = state.NewTableAccessor[Book]()
+var tokenTable = state.NewTableAccessor[Token]()
+var embeddedStructTable = state.NewTableAccessor[EmbeddedStructSchema]()
+
+var testSchemaToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
+	&Person{}:                   (*state.TableBaseAccessor[any])(personTable),
+	&Book{}:                     (*state.TableBaseAccessor[any])(bookTable),
+	&Token{}:                    (*state.TableBaseAccessor[any])(tokenTable),
+	&server.TransactionSchema{}: (*state.TableBaseAccessor[any])(server.TransactionTable),
+	&EmbeddedStructSchema{}:     (*state.TableBaseAccessor[any])(embeddedStructTable),
+}
 
 func testRegisterTables(w *state.GameWorld) {
-	w.AddTables(personTable, bookTable, server.TransactionTable)
+	for _, accessor := range testSchemaToAccessors {
+		w.AddTable(accessor)
+	}
 }
 
 type testPersonRequests struct {
@@ -83,7 +129,7 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 	}
 }
 
-func initializeTestWorld(systems ...server.TickSystemFunction) (*server.EngineCtx, error) {
+func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
 	gameTick := server.NewGameTick(100)
 
 	// initiate an empty tick schedule
@@ -109,7 +155,7 @@ func initializeTestWorld(systems ...server.TickSystemFunction) (*server.EngineCt
 		SystemBroadcastHandler: &testBroadcastHandler{},
 	}
 
-	return gameCtx, nil
+	return gameCtx
 }
 
 type testErrorHandler struct {

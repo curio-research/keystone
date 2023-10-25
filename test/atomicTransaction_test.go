@@ -7,12 +7,10 @@ import (
 	"github.com/curio-research/keystone/state"
 	"github.com/curio-research/keystone/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
-	ctx, err := initializeTestWorld(TestPersonRequestSystem)
-	require.Nil(t, err)
+	ctx := initializeTestWorld(TestPersonRequestSystem)
 
 	person1Req := testPersonRequest{OP: state.UpdateOP, Entity: 27, Val: Person{
 		Name: testName1,
@@ -37,8 +35,7 @@ func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
 }
 
 func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
-	ctx, err := initializeTestWorld(TestPersonRequestSystem)
-	require.Nil(t, err)
+	ctx := initializeTestWorld(TestPersonRequestSystem)
 
 	person1Req := testPersonRequest{OP: state.UpdateOP, Entity: 27, Val: Person{
 		Name: testName1,
@@ -63,8 +60,7 @@ func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
 }
 
 func TestWorldUpdatedOnSuccess_GeneralSystem(t *testing.T) {
-	ctx, err := initializeTestWorld(TestPersonSystem)
-	require.Nil(t, err)
+	ctx := initializeTestWorld(TestPersonSystem)
 
 	utils.TickWorldForward(ctx, 1)
 
@@ -76,8 +72,7 @@ func TestWorldUpdatedOnSuccess_GeneralSystem(t *testing.T) {
 }
 
 func TestWorldNotUpdatedOnFailure_GeneralSystem(t *testing.T) {
-	ctx, err := initializeTestWorld(TestPersonSystemWithError)
-	require.Nil(t, err)
+	ctx := initializeTestWorld(TestPersonSystemWithError)
 
 	utils.TickWorldForward(ctx, 1)
 
