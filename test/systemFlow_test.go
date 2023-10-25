@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/curio-research/keystone/core"
 	server "github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/curio-research/keystone/test/testutils"
 	"github.com/gorilla/websocket"
@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var BookTable = state.NewTableAccessor[Book]()
+var BookTable = core.NewTableAccessor[Book]()
 
 var p *testutils.PortManager
 
@@ -238,7 +238,7 @@ func TestDeleteAndFilter(t *testing.T) {
 	}
 }
 
-func addBook(w state.IWorld, title, author string, ownerID int, entity int) int {
+func addBook(w core.IWorld, title, author string, ownerID int, entity int) int {
 	return BookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
@@ -246,7 +246,7 @@ func addBook(w state.IWorld, title, author string, ownerID int, entity int) int 
 	})
 }
 
-func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) int {
+func addBookSpecific(w core.IWorld, title, author string, ownerID, entity int) int {
 	return BookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,

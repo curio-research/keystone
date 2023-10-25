@@ -11,8 +11,8 @@ import (
 	"github.com/curio-research/keystone/utils"
 
 	"github.com/DATA-DOG/go-txdb"
+	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -188,7 +188,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 
 	type MovePersonRequest struct {
 		TargetEntity int
-		NewPosition  state.Pos
+		NewPosition  core.Pos
 	}
 
 	updatePersonSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePersonRequest]) {
@@ -200,7 +200,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 		personTable.Set(ctx.W, req.TargetEntity, person)
 	})
 
-	newGameEngine := func(t *testing.T) (*server.EngineCtx, *state.GameWorld) {
+	newGameEngine := func(t *testing.T) (*server.EngineCtx, *core.GameWorld) {
 		gameEngine := initializeTestWorld(initializePersonSystem, updatePersonSystem)
 		return gameEngine, gameEngine.World
 	}
@@ -433,7 +433,7 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	assert.Equal(t, testWallet2, player3.MainWallet)
 }
 
-func setupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
+func setupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*core.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
 	var db *sql.DB
 	db, err := sql.Open("txdb", sqlDSN)
 	if err != nil {

@@ -1,14 +1,14 @@
 package db
 
 import (
+	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
 
-func InitializeSQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+func InitializeSQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*core.TableBaseAccessor[any]) error {
 	dialector := mysql.Open(mySQLDSN)
 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, ctx.RandSeed, accessors)
 	if err != nil {
@@ -20,7 +20,7 @@ func InitializeSQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map
 	return nil
 }
 
-func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, randSeed int, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, randSeed int, accessors map[interface{}]*core.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	saveStateHandler, err := newSQLSaveStateHandler(dialector, gameId, accessors)
 	if err != nil {
 		return nil, nil, err

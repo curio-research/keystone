@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/curio-research/keystone/state"
+	"github.com/curio-research/keystone/core"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,7 +30,7 @@ type StreamServer struct {
 	// list of client message data packets to be sent to client
 	ClientEventsQueue []ClientEvent
 
-	TableUpdatesQueue []state.TableUpdate
+	TableUpdatesQueue []core.TableUpdate
 
 	// a pool of connections
 	Conns      map[*websocket.Conn]ConnectionType
@@ -49,7 +49,7 @@ type StreamServer struct {
 // TODO: unused. remove in future
 type UpdatePacket struct {
 	// array of table update packets that need to be broadcasted to clients
-	TableUpdates []state.TableUpdate `json:"tableUpdates"`
+	TableUpdates []core.TableUpdate `json:"tableUpdates"`
 
 	// id of package that corresponds with the HTTP requests's returned UUID (similar to a transaction hash)
 	Uuid string `json:"uuid"`
@@ -195,7 +195,7 @@ func (ws *StreamServer) PublishMessage() {
 				tableUpdates := ws.FetchTableUpdatesFromQueue()
 				ws.ClearTableUpdatesQueue()
 
-				tableUpdateBytes, _ := state.EncodeTableUpdateArrayToBytes(tableUpdates)
+				tableUpdateBytes, _ := core.EncodeTableUpdateArrayToBytes(tableUpdates)
 
 				// broadcast all state updates to subscribers of state data
 				for conn, connectionType := range ws.Conns {
@@ -249,7 +249,7 @@ func (ws *StreamServer) PublishMessage() {
 // this is similar to broadcasting events in Solidity.
 // we broadcast state changes to client along with additional useful metadata, for clients, data pipelines down the line, etc
 // TODO: NOTE: currently we do not broadcast table updates
-func (ws *StreamServer) PublishStateChanges(tableUpdates state.TableUpdateArray, clientEvents []ClientEvent) {
+func (ws *StreamServer) PublishStateChanges(tableUpdates core.TableUpdateArray, clientEvents []ClientEvent) {
 	if ws == nil {
 		return
 	}
@@ -282,10 +282,10 @@ func (ws *StreamServer) ClearClientMessageQueue() {
 }
 
 // fetch all table updates from queue
-func (ws *StreamServer) FetchTableUpdatesFromQueue() []state.TableUpdate {
+func (ws *StreamServer) FetchTableUpdatesFromQueue() []core.TableUpdate {
 	ws.ProtoBufPacketsMutex.Lock()
 
-	res := []state.TableUpdate{}
+	res := []core.TableUpdate{}
 	res = append(res, ws.TableUpdatesQueue...)
 
 	ws.ProtoBufPacketsMutex.Unlock()
@@ -295,5 +295,5 @@ func (ws *StreamServer) FetchTableUpdatesFromQueue() []state.TableUpdate {
 
 // clear all table updates from queue
 func (ws *StreamServer) ClearTableUpdatesQueue() {
-	ws.TableUpdatesQueue = make([]state.TableUpdate, 0)
+	ws.TableUpdatesQueue = make([]core.TableUpdate, 0)
 }

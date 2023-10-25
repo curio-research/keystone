@@ -3,8 +3,8 @@ package test
 import (
 	"testing"
 
+	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	"github.com/curio-research/keystone/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,10 +12,10 @@ import (
 func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
 	ctx := initializeTestWorld(TestPersonRequestSystem)
 
-	person1Req := testPersonRequest{OP: state.UpdateOP, Entity: 27, Val: Person{
+	person1Req := testPersonRequest{OP: core.UpdateOP, Entity: 27, Val: Person{
 		Name: testName1,
 	}, SendError: false}
-	person2Req := testPersonRequest{OP: state.UpdateOP, Entity: 28, Val: Person{
+	person2Req := testPersonRequest{OP: core.UpdateOP, Entity: 28, Val: Person{
 		Name: testName2,
 	}, SendError: false}
 
@@ -37,10 +37,10 @@ func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
 func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
 	ctx := initializeTestWorld(TestPersonRequestSystem)
 
-	person1Req := testPersonRequest{OP: state.UpdateOP, Entity: 27, Val: Person{
+	person1Req := testPersonRequest{OP: core.UpdateOP, Entity: 27, Val: Person{
 		Name: testName1,
 	}, SendError: false}
-	person2Req := testPersonRequest{OP: state.UpdateOP, Entity: 28, Val: Person{
+	person2Req := testPersonRequest{OP: core.UpdateOP, Entity: 28, Val: Person{
 		Name: testName2,
 	}, SendError: true}
 
@@ -90,11 +90,11 @@ var TestPersonRequestSystem = server.CreateSystemFromRequestHandler(func(ctx *se
 
 	for _, person := range req.People {
 		switch person.OP {
-		case state.UpdateOP:
+		case core.UpdateOP:
 			personTable.Set(w, person.Entity, person.Val)
-		case state.RemovalOP:
+		case core.RemovalOP:
 			personTable.RemoveEntity(w, person.Entity)
-		case state.AddEntityOP:
+		case core.AddEntityOP:
 			personTable.AddSpecific(w, person.Entity, person.Val)
 		}
 

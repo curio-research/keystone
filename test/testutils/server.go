@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -17,7 +17,7 @@ func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNu
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
 
-	gameWorld := state.NewWorld()
+	gameWorld := core.NewWorld()
 
 	gameTick := server.NewGameTick(20)
 	gameTick.Schedule = server.NewTickSchedule()
