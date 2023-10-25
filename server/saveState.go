@@ -17,7 +17,7 @@ type ISaveTransactions interface {
 	SaveTransactions(ctx *EngineCtx, updates []TransactionSchema) error
 
 	// TODO: hook this up with a CLI for our SDK
-	RestoreStateFromTxs(tickNumber int, gameId string) (*state.GameWorld, error)
+	RestoreStateFromTxs(ctx *EngineCtx, tickNumber int, gameId string) error
 }
 
 // game loop that triggers the save world state
