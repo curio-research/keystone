@@ -32,7 +32,7 @@ func newSQLSaveTransactionHandler(dialector gorm.Dialector, randSeed int, gameID
 	return handler, nil
 }
 
-func (h *MySQLSaveTransactionHandler) SaveTransactions(updates []server.TransactionSchema) error {
+func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.TransactionSchema) error {
 	updatesForSql := []TransactionSQLFormat{}
 	for _, transaction := range transactions {
 		updatesForSql = append(updatesForSql, TransactionSQLFormat{
