@@ -9,14 +9,14 @@ import (
 
 var (
 	// Person testing vars
-	testName1 = "Kaushik"
-	testName2 = "Kevin"
+	testName1 = "Alice"
+	testName2 = "Bob"
 	testName3 = "Francisco"
 
 	testPos1 = state.Pos{1, 2}
 	testPos2 = state.Pos{5, 6}
 
-	testAddress1 = "San Mateo WeWork"
+	testAddress1 = "123 Vitalik Drive"
 	testAddress2 = "Home"
 
 	testAge1 = 26
@@ -45,9 +45,10 @@ type Person struct {
 }
 
 type Book struct {
-	Title  string
-	Author string
-	Id     int
+	Title   string
+	Author  string
+	OwnerID int
+	Id      int
 }
 
 var personTable = state.NewTableAccessor[Person]()

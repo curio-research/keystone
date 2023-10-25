@@ -14,3 +14,12 @@ func TickWorldForward(ctx *server.EngineCtx, ticks int) int {
 	}
 	return ctx.GameTick.TickNumber
 }
+
+// time in milliseconds
+func CalcFutureTickFromMs(ctx *server.EngineCtx, timeInMs int) int {
+	return ctx.GameTick.TickNumber + (timeInMs / ctx.GameTick.TickRateMs)
+}
+
+func CalcFutureTickFromS(ctx *server.EngineCtx, timeInSeconds int) int {
+	return CalcFutureTickFromMs(ctx, timeInSeconds*1000)
+}
