@@ -12,6 +12,7 @@ func NewEntityMananger() *EntityManager {
 	return &EntityManager{
 		SparseSet: NewSparseSet(),
 		mu:        &sync.Mutex{},
+		nonce:     1,
 	}
 }
 

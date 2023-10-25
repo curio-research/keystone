@@ -81,7 +81,7 @@ func TestAddBook(t *testing.T) {
 func tearDown(ws *websocket.Conn, server *http.Server) {
 	ws.Close()
 	server.Close()
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 50)
 }
 
 func TestUpdate(t *testing.T) {
@@ -263,7 +263,9 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 		return err
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 100)
+	// time.Sleep(time.Second)
+
 	return nil
 }
 

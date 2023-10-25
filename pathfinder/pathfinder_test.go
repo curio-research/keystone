@@ -13,7 +13,7 @@ import (
 // this prevents the deepCopy step
 
 // Speeds up aggregate ~4x
-func TestPathfindingNew(t *testing.T) {
+func TestPathfinding(t *testing.T) {
 	// construct new map
 	gameMap := ConstructMap2dArray(102, 102, 0.1)
 

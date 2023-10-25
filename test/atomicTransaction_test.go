@@ -68,10 +68,10 @@ func TestWorldUpdatedOnSuccess_GeneralSystem(t *testing.T) {
 
 	utils.TickWorldForward(ctx, 1)
 
-	person := personTable.Get(ctx.World, 0)
+	person := personTable.Get(ctx.World, personEntity)
 	assert.Equal(t, testName1, person.Name)
 
-	book := bookTable.Get(ctx.World, 1)
+	book := bookTable.Get(ctx.World, bookEntity)
 	assert.Equal(t, testBookTitle1, book.Title)
 }
 
@@ -112,16 +112,19 @@ var TestPersonRequestSystem = server.CreateSystemFromRequestHandler(func(ctx *se
 	}
 })
 
+var personEntity = 1
+var bookEntity = 2
+
 var TestPersonSystem = server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 	if ctx.GameCtx.GameTick.TickNumber == 1 {
 		w := ctx.W
 
-		personTable.Add(w, Person{
+		personTable.AddSpecific(w, personEntity, Person{
 			Name:    testName1,
 			Age:     testAge1,
 			Address: testAddress1,
 		})
-		bookTable.Add(w, Book{
+		bookTable.AddSpecific(w, bookEntity, Book{
 			Title:  testBookTitle1,
 			Author: testBookAuthor1,
 		})

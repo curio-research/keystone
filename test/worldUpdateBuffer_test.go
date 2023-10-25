@@ -23,6 +23,7 @@ func TestWorldUpdateBuffer_Add(t *testing.T) {
 		Name:     testName1,
 		Position: testPos1,
 		Address:  testAddress1,
+		Id:       1,
 	}
 	person1Entity := personTable.Add(currWorld, p1)
 
@@ -30,11 +31,9 @@ func TestWorldUpdateBuffer_Add(t *testing.T) {
 		Name:     testName2,
 		Position: testPos2,
 		Address:  testAddress1,
+		Id:       2,
 	}
 	person2Entity := personTable.Add(bufferWorld, p2)
-
-	p1.Id = 0
-	p2.Id = 1
 
 	assertUpdates := func(t *testing.T, w state.IWorld) {
 		assert.Equal(t, p1, personTable.Get(w, person1Entity))
@@ -55,48 +54,52 @@ func TestWorldUpdateBuffer_AddSpecific(t *testing.T) {
 	testRegisterTables(currWorld)
 	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
+	p1Entity := 100
+	b1Entity := 101
+	p2Entity := 102
+	b2Entity := 103
+
 	p1 := Person{
 		Name: testName1,
 		Age:  testAge1,
+		Id:   p1Entity,
 	}
-	person1Entity := personTable.AddSpecific(currWorld, 0, p1)
+	personTable.AddSpecific(currWorld, p1Entity, p1)
 
 	b1 := Book{
 		Title:  testBookTitle1,
 		Author: testBookAuthor1,
+		Id:     b1Entity,
 	}
-	book1Entity := bookTable.AddSpecific(bufferWorld, 1, b1)
+	bookTable.AddSpecific(bufferWorld, b1Entity, b1)
 
 	b2 := Book{
 		Title:  testBookTitle2,
 		Author: testBookAuthor2,
+		Id:     b2Entity,
 	}
-	book2Entity := bookTable.Add(currWorld, b2)
+	bookTable.AddSpecific(currWorld, b2Entity, b2)
 
 	p2 := Person{
 		Name:     testName2,
 		Position: testPos2,
+		Id:       p2Entity,
 	}
-	person2Entity := personTable.Add(bufferWorld, p2)
-
-	p1.Id = 0
-	b1.Id = 1
-	b2.Id = 2
-	p2.Id = 3
+	personTable.AddSpecific(bufferWorld, p2Entity, p2)
 
 	assertUpdates := func(t *testing.T, w state.IWorld) {
-		assert.Equal(t, p1, personTable.Get(w, person1Entity))
-		assert.Equal(t, b1, bookTable.Get(w, book1Entity))
-		assert.Equal(t, b2, bookTable.Get(w, book2Entity))
-		assert.Equal(t, p2, personTable.Get(w, person2Entity))
+		assert.Equal(t, p1, personTable.Get(w, p1Entity))
+		assert.Equal(t, b1, bookTable.Get(w, b1Entity))
+		assert.Equal(t, b2, bookTable.Get(w, b2Entity))
+		assert.Equal(t, p2, personTable.Get(w, p2Entity))
 	}
 
 	assertUpdates(t, bufferWorld)
 
-	assertEmpty(t, bookTable.Get(currWorld, book1Entity))
-	assertEmpty(t, personTable.Get(currWorld, person2Entity))
-	assert.Equal(t, p1, personTable.Get(currWorld, person1Entity))
-	assert.Equal(t, b2, bookTable.Get(currWorld, book2Entity))
+	assertEmpty(t, bookTable.Get(currWorld, b1Entity))
+	assertEmpty(t, personTable.Get(currWorld, p2Entity))
+	assert.Equal(t, p1, personTable.Get(currWorld, p1Entity))
+	assert.Equal(t, b2, bookTable.Get(currWorld, b2Entity))
 
 	bufferWorld.ApplyUpdates()
 	assertUpdates(t, currWorld)
@@ -107,26 +110,31 @@ func TestWorldUpdateBuffer_Set(t *testing.T) {
 	testRegisterTables(currWorld)
 	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
+	personEntity := 100
+	bookEntity := 101
+
 	person := Person{
 		Name:     testName1,
 		Position: testPos1,
+		Id:       personEntity,
 	}
-	personEntity := personTable.Add(currWorld, person)
+	personTable.AddSpecific(currWorld, personEntity, person)
 
 	book := Book{
 		Title:  testBookTitle1,
 		Author: testBookAuthor1,
+		Id:     bookEntity,
 	}
-	bookEntity := bookTable.Add(bufferWorld, book)
+	bookTable.AddSpecific(bufferWorld, bookEntity, book)
 
 	updatedPerson := person
 	updatedPerson.Position = testPos2
-	updatedPerson.Id = 0
+	updatedPerson.Id = personEntity
 	personTable.Set(bufferWorld, personEntity, updatedPerson)
 
 	updatedBook := book
 	updatedBook.Author = testBookAuthor2
-	updatedBook.Id = 1
+	updatedBook.Id = bookEntity
 	bookTable.Set(bufferWorld, bookEntity, updatedBook)
 
 	assertUpdates := func(t *testing.T, w state.IWorld) {
@@ -148,29 +156,34 @@ func TestWorldUpdateBuffer_Remove(t *testing.T) {
 	testRegisterTables(currWorld)
 	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
+	book1Entity := 100
+	book2Entity := 101
+	book3Entity := 102
+	book4Entity := 103
+
 	book1 := Book{
 		Title:  testBookTitle1,
 		Author: testBookAuthor1,
+		Id:     book1Entity,
 	}
 	book2 := Book{
 		Title:  testBookTitle2,
 		Author: testBookAuthor2,
+		Id:     book2Entity,
 	}
 	book3 := book1
+	book3.Id = book3Entity
+
 	book4 := Book{
 		Title:  testBookTitle3,
 		Author: testBookAuthor3,
+		Id:     book4Entity,
 	}
 
-	book1Entity := bookTable.Add(bufferWorld, book1)
-	book2Entity := bookTable.AddSpecific(bufferWorld, 34, book2)
-	book3Entity := bookTable.Add(currWorld, book3)
-	book4Entity := bookTable.AddSpecific(currWorld, 45, book4)
-
-	book1.Id = 0
-	book2.Id = 34
-	book3.Id = 1
-	book4.Id = 45
+	bookTable.AddSpecific(bufferWorld, book1Entity, book1)
+	bookTable.AddSpecific(bufferWorld, book2Entity, book2)
+	bookTable.AddSpecific(currWorld, book3Entity, book3)
+	bookTable.AddSpecific(currWorld, book4Entity, book4)
 
 	bookTable.RemoveEntity(bufferWorld, book2Entity)
 	bookTable.RemoveEntity(bufferWorld, book3Entity)
@@ -290,7 +303,7 @@ func TestWorldUpdateBuffer_Entities_Add(t *testing.T) {
 	assertUpdates := func(t *testing.T, w state.IWorld) {
 		entities := personTable.Entities(w)
 		assert.Len(t, entities, 8)
-		for _, i := range []int{0, 1, 2, 3, 45, 56, 69, 78} {
+		for _, i := range []int{1, 2, 3, 4, 45, 56, 69, 78} {
 			assert.Contains(t, entities, i)
 		}
 	}
@@ -299,7 +312,7 @@ func TestWorldUpdateBuffer_Entities_Add(t *testing.T) {
 
 	entities := personTable.Entities(currWorld)
 	assert.Len(t, entities, 5)
-	for _, i := range []int{0, 1, 45, 69, 78} {
+	for _, i := range []int{1, 2, 45, 69, 78} {
 		assert.Contains(t, entities, i)
 	}
 
@@ -330,7 +343,7 @@ func TestWorldUpdateBuffer_Entities_Remove(t *testing.T) {
 	assertUpdates := func(t *testing.T, w state.IWorld) {
 		entities := personTable.Entities(w)
 		assert.Len(t, entities, 4)
-		for _, i := range []int{0, 2, 56, 69} {
+		for _, i := range []int{2, 56, 69} {
 			assert.Contains(t, entities, i)
 		}
 	}
@@ -339,7 +352,7 @@ func TestWorldUpdateBuffer_Entities_Remove(t *testing.T) {
 
 	entities := personTable.Entities(currWorld)
 	assert.Len(t, entities, 5)
-	for _, i := range []int{0, 1, 45, 69, 78} {
+	for _, i := range []int{1, 45, 69, 78} {
 		assert.Contains(t, entities, i)
 	}
 
