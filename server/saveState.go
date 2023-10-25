@@ -14,7 +14,7 @@ type ISaveState interface {
 }
 
 type ISaveTransactions interface {
-	SaveTransactions(ctx *EngineCtx, updates []TransactionSchema) error
+	SaveTransactions(updates []TransactionSchema) error
 
 	// TODO: hook this up with a CLI for our SDK
 	RestoreStateFromTxs(ctx *EngineCtx, tickNumber int, gameId string) error
@@ -38,7 +38,7 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
 
 				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
 				ctx.ClearTransactionsToSave()
-				ctx.SaveTransactionsHandler.SaveTransactions(ctx, transactionsToSave)
+				ctx.SaveTransactionsHandler.SaveTransactions(transactionsToSave)
 			}
 		}
 	}()

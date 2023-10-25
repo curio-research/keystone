@@ -234,7 +234,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 
 	// apply transactions to the world
 	utils.TickWorldForward(initialGameEngine, 3)
-	require.Nil(t, mySQLTxHandler.SaveTransactions(initialGameEngine, initialGameEngine.TransactionsToSave))
+	require.Nil(t, mySQLTxHandler.SaveTransactions(initialGameEngine.TransactionsToSave))
 
 	// reinitializing tick 1
 	newCtx, newGw := newGameEngine(t)
@@ -397,8 +397,8 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	utils.TickWorldForward(game1, 2)
 	utils.TickWorldForward(game2, 2)
 
-	game1.SaveTransactionsHandler.SaveTransactions(game1, game1.TransactionsToSave)
-	game2.SaveTransactionsHandler.SaveTransactions(game2, game2.TransactionsToSave)
+	game1.SaveTransactionsHandler.SaveTransactions(game1.TransactionsToSave)
+	game2.SaveTransactionsHandler.SaveTransactions(game2.TransactionsToSave)
 
 	newGameEngine1 := newGameEngine(t, game1System, "")
 	newGameEngine2 := newGameEngine(t, game2System, "")
