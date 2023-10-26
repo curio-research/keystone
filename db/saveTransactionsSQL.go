@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/utils"
 	"gorm.io/gorm"
@@ -47,13 +46,9 @@ func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.Tra
 	return h.transactionTable.AddEntries(updatesForSql...)
 }
 
+// initialize the world to the initial state before calling
 func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx, tickNumber int, _ string) error {
 	gw := ctx.World
-	for _, table := range gw.Tables {
-		if len(table.EntityToValue) != 0 {
-			return fmt.Errorf("table %s is not empty", table.Name)
-		}
-	}
 
 	entries, err := h.transactionTable.GetEntriesUntilTick(tickNumber)
 	if err != nil {

@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"github.com/curio-research/keystone/db"
 	"strconv"
 	"sync"
 
@@ -12,7 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNumber int) (*gin.Engine, *server.EngineCtx, error) {
+// TODO refactor http to also be started inside here
+func StartMainServer(mode core.GameMode, websocketPort int, mySQLdsn string, randSeedNumber int, schemaToTableAccessors map[interface{}]*core.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -38,6 +40,15 @@ func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNu
 		RandSeed: randSeedNumber,
 	}
 
+	if mode == core.Prod {
+		err := db.InitializeSQLHandlers(gameCtx, mySQLdsn, schemaToTableAccessors)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		server.RegisterHTTPSQLRoutes(gameCtx, s)
+	}
+
 	// initialize a websocket streaming server for both incoming and outgoing requests
 	streamServer, err := server.NewStreamServer(s, gameCtx, SocketRequestRouter, websocketPort)
 	if err != nil {
@@ -45,9 +56,6 @@ func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNu
 	}
 	gameCtx.Stream = streamServer
 	gameTick.Setup(gameCtx, gameTick.Schedule)
-
-	// setup server routes
-	// TODO: Restore HTTP routes in future integration tests
 
 	return s, gameCtx, nil
 }

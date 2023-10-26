@@ -3,6 +3,7 @@ package test
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"testing"
@@ -269,11 +270,10 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	return nil
 }
 
-func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler) {
-	mode := "dev" // TODO: create enums for this?
+func startServer(t *testing.T, mode core.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, err := testutils.StartMainServer(mode, wsPort, "", 1)
+	s, e, err := testutils.StartMainServer(mode, wsPort, "", 1, testSchemaToAccessors)
 	require.Nil(t, err)
 
 	mockErrorHandler := testutils.NewMockErrorHandler()
@@ -284,9 +284,12 @@ func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server
 		Handler: s,
 	}
 
+	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	require.Nil(t, err)
+
 	go func() {
 		fmt.Println("starting server")
-		err := httpServer.ListenAndServe()
+		err := http.Serve(l, s)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("http server closed with unexpected error %v", err)
 			return
