@@ -57,20 +57,20 @@ type Person struct {
 	Address    string
 	Position   state.Pos `gorm:"embedded"`
 	BookId     int
-	Id         int `gorm:"primaryKey"`
+	Id         int `gorm:"primaryKey;autoIncrement:false"`
 }
 
 type Book struct {
 	Title   string
 	Author  string
 	OwnerID int
-	Id      int `gorm:"primaryKey"`
+	Id      int `gorm:"primaryKey;autoIncrement:false"`
 }
 
 type Token struct {
 	OriginalOwnerId int
 	OwnerId         int
-	Id              int `gorm:"primaryKey"`
+	Id              int `gorm:"primaryKey;autoIncrement:false"`
 }
 
 type NestedStruct struct {
@@ -82,7 +82,7 @@ type NestedStruct struct {
 
 type EmbeddedStructSchema struct {
 	Emb NestedStruct `gorm:"embedded"`
-	Id  int          `gorm:"primaryKey"`
+	Id  int          `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()

@@ -25,7 +25,7 @@ import (
 )
 
 func TestMySQLSaveStateHandler(t *testing.T) {
-	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	var player1Entity, player2Entity, nt1Entity, nt2Entity int
@@ -80,7 +80,11 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_Removal(t *testing.T) {
+<<<<<<< HEAD
 	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
+=======
+	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db.Close()
 
 	var player1Entity int
@@ -115,7 +119,11 @@ func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
+<<<<<<< HEAD
 	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
+=======
+	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db.Close()
 
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
@@ -149,7 +157,11 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 }
 
 func TestMySQLRestoreStateFromTxs(t *testing.T) {
+<<<<<<< HEAD
 	_, mySQLTxHandler, db := testutils.SetupTestDB(t, testGameID2, true, testSchemaToAccessors)
+=======
+	_, mySQLTxHandler, db := setupMySQLTestDB(t, testGameID2, true, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db.Close()
 
 	var p1Entity, p2Entity, p3Entity = testEntity1, testEntity2, testEntity3
@@ -271,7 +283,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 	assert.Equal(t, p3Pos2, p3.Position)
 }
 
-func TestMultipleGames_SaveState(t *testing.T) {
+func TestMySQLMultipleGames_SaveState(t *testing.T) {
 	game1System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		personTable.AddSpecific(ctx.W, 69, Person{
 			Name: testName1,
@@ -294,13 +306,21 @@ func TestMultipleGames_SaveState(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
+<<<<<<< HEAD
 	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
+=======
+	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
+<<<<<<< HEAD
 	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
+=======
+	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
@@ -373,13 +393,21 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
+<<<<<<< HEAD
 	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
+=======
+	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
+<<<<<<< HEAD
 	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
+=======
+	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
+>>>>>>> 799167c (All SQLite tests pass. time to refactor)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
@@ -426,7 +454,7 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 <<<<<<< HEAD
 =======
 
-func setupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
+func setupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
 	var db *sql.DB
 	db, err := sql.Open("txdb", sqlDSN)
 	if err != nil {
@@ -468,23 +496,11 @@ func deleteAllTables(t *testing.T, db *sql.DB) {
 	fmt.Println("-> Existing tables have been removed")
 }
 
-type TestSoldier struct {
-	Health int
-	Id     int `gorm:"primaryKey;autoIncrement:false"`
-}
-
 func deleteAllTablesSQLite(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
-
-	// add a table
-	// TODO: this is just for testing
-
-	fmt.Println(1)
-
-	db.Migrator().CreateTable(&TestSoldier{})
 
 	// get list of table names
 	tableNames := getSQLiteTableNames(db)

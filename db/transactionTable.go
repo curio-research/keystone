@@ -15,7 +15,7 @@ type TransactionSQLFormat struct {
 	GameId string
 
 	// unix in nano seconds
-	UnixTimestamp int `gorm:"primaryKey"`
+	UnixTimestamp int `gorm:"primaryKey;autoIncrement:false"`
 
 	// which tick it was registered at
 	Tick int
