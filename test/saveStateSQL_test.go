@@ -468,20 +468,23 @@ func deleteAllTables(t *testing.T, db *sql.DB) {
 	fmt.Println("-> Existing tables have been removed")
 }
 
-type Soldier struct {
-	Position state.Pos `gorm:"embedded"`
-	Health   int
+type TestSoldier struct {
+	Health int
+	Id     int `gorm:"primaryKey;autoIncrement:false"`
 }
 
 func deleteAllTablesSQLite(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
 
 	// add a table
 	// TODO: this is just for testing
-	// db.Migrator().CreateTable(&Soldier{})
+
+	fmt.Println(1)
+
+	db.Migrator().CreateTable(&TestSoldier{})
 
 	// get list of table names
 	tableNames := getSQLiteTableNames(db)
