@@ -2,26 +2,20 @@ package test
 
 import (
 	"database/sql"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/curio-research/keystone/db"
-	gamedb "github.com/curio-research/keystone/db"
-
-	"github.com/DATA-DOG/go-txdb"
+	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/curio-research/keystone/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
-
-	"github.com/joho/godotenv"
 )
 
-func TestMySQLSaveStateHandler(t *testing.T) {
-	handler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	defer db.Close()
+// shared core tests for sql family
 
+// core test save state handler
+func coreTestSaveStateHandler(t *testing.T, saveStateHandler *db.MySQLSaveStateHandler) {
 	var player1Entity, player2Entity, nt1Entity, nt2Entity int
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
@@ -46,12 +40,12 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
-	server.TickWorldForward(gameEngine, 1)
-	require.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	utils.TickWorldForward(gameEngine, 1)
+	require.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
 	newGameEngine := initializeTestWorld()
 	newGw := newGameEngine.World
-	require.Nil(t, mySQLStateHandler.RestoreState(newGameEngine, ""))
+	require.Nil(t, saveStateHandler.RestoreState(newGameEngine, ""))
 
 	p1Actual := personTable.Get(newGw, player1Entity)
 	assert.Equal(t, testName1, p1Actual.Name)
@@ -71,21 +65,43 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 	nt2Actual := tokenTable.Get(newGw, nt2Entity)
 	assert.Equal(t, player2Entity, nt2Actual.OwnerId)
 	assert.Equal(t, testEntity1, nt2Actual.Id)
-	coreTestSaveStateHandler(t, handler)
 }
 
-func TestMySQLSaveStateHandler_Removal(t *testing.T) {
-	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
-	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	defer db.Close()
+// core test save handler removal
+func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *db.MySQLSaveStateHandler) {
+	var player1Entity int
+	addFirst := true
+	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
+		w := ctx.W
+		if addFirst == true {
+			player1Entity = personTable.AddSpecific(w, 3, Person{
+				Name:       testName1,
+				MainWallet: testWallet1,
+			})
+			addFirst = false
+		} else {
+			personTable.RemoveEntity(w, player1Entity)
+		}
+	})
 
-	coreTestSaveStateRemovalHandler(t, mySQLStateHandler)
+	gameEngine := initializeTestWorld(addVarsSystem)
+	utils.TickWorldForward(gameEngine, 1)
+	assert.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+
+	utils.TickWorldForward(gameEngine, 1)
+	assert.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+
+	newGameEngine := initializeTestWorld()
+	newGw := newGameEngine.World
+	require.Nil(t, saveStateHandler.RestoreState(newGameEngine, ""))
+
+	p1Actual := personTable.Get(newGw, player1Entity)
+	assert.Equal(t, "", p1Actual.Name)
+	assert.Equal(t, "", p1Actual.MainWallet)
 }
 
-func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
-	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	defer db.Close()
-
+// core test save state handler with nested structs
+func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *db.MySQLSaveStateHandler) {
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
 		embeddedStructTable.AddSpecific(w, testEntity1, EmbeddedStructSchema{
@@ -99,12 +115,12 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
-	server.TickWorldForward(gameEngine, 1)
-	require.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	utils.TickWorldForward(gameEngine, 1)
+	require.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
 	newGameEngine := initializeTestWorld()
 	newGw := newGameEngine.World
-	require.Nil(t, mySQLStateHandler.RestoreState(newGameEngine, ""))
+	require.Nil(t, saveStateHandler.RestoreState(newGameEngine, ""))
 
 	esActual := embeddedStructTable.Get(newGw, testEntity1)
 	assert.Equal(t, testEntity1, esActual.Id)
@@ -114,15 +130,47 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 	assert.Equal(t, true, embStruct.Happy)
 	assert.Equal(t, 26, embStruct.Age)
 	assert.Equal(t, testName1, embStruct.Name)
-	coreTestSaveStateWithNestedStructsHandler(t, mySQLStateHandler)
+
 }
 
-func TestMySQLRestoreStateFromTxs(t *testing.T) {
-	_, mySQLTxHandler, db := testutils.SetupTestDB(t, testGameID2, true, testSchemaToAccessors)
-	_, mySQLTxHandler, db := setupMySQLTestDB(t, testGameID2, true, testSchemaToAccessors)
-	defer db.Close()
+// core test restore state from transactions
+func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *db.MySQLSaveTransactionHandler) {
+	var p1Entity, p2Entity, p3Entity = testEntity1, testEntity2, testEntity3
+	var p1Pos, p2Pos, p3Pos = testPos1, testPos2, testPos3
 
-	coreTestRestoreStateFromTransactionsHandler(t, mySQLTxHandler)
+	// General system always gets called, so requests don't need to be saved
+	initializePersonSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
+		if ctx.GameCtx.GameTick.TickNumber == 1 {
+			p1Entity = personTable.AddSpecific(ctx.W, p1Entity, Person{
+				Name:     testName1,
+				Position: p1Pos,
+				Id:       p1Entity,
+			})
+
+			p2Entity = personTable.AddSpecific(ctx.W, p2Entity, Person{
+				Name:     testName2,
+				Position: p2Pos,
+				Id:       p2Entity,
+			})
+
+			p3Entity = personTable.AddSpecific(ctx.W, p3Entity, Person{
+				Name:     testName3,
+				Position: p3Pos,
+				Id:       p3Entity,
+			})
+		}
+	})
+
+	type MovePersonRequest struct {
+		TargetEntity int
+		NewPosition  state.Pos
+	}
+
+	updatePersonSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePersonRequest]) {
+		req := ctx.Req
+
+		person := personTable.Get(ctx.W, req.TargetEntity)
+		person.Position = req.NewPosition
 
 		personTable.Set(ctx.W, req.TargetEntity, person)
 	})
@@ -160,12 +208,12 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 	}, "", true)
 
 	// apply transactions to the world
-	server.TickWorldForward(initialGameEngine, 3)
-	require.Nil(t, mySQLTxHandler.SaveTransactions(initialGameEngine.TransactionsToSave))
+	utils.TickWorldForward(initialGameEngine, 3)
+	require.Nil(t, saveTxHandler.SaveTransactions(initialGameEngine, initialGameEngine.TransactionsToSave))
 
 	// reinitializing tick 1
 	newCtx, newGw := newGameEngine(t)
-	err := mySQLTxHandler.RestoreStateFromTxs(newCtx, 1, "")
+	err := saveTxHandler.RestoreStateFromTxs(newCtx, 1, "")
 	require.Nil(t, err)
 
 	p1 := personTable.Get(newGw, p1Entity)
@@ -179,7 +227,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 
 	// reinitializing tick 2
 	newCtx, newGw = newGameEngine(t)
-	err = mySQLTxHandler.RestoreStateFromTxs(newCtx, 2, "")
+	err = saveTxHandler.RestoreStateFromTxs(newCtx, 2, "")
 	require.Nil(t, err)
 
 	p1 = personTable.Get(newGw, p1Entity)
@@ -193,7 +241,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 
 	// reinitializing tick 3
 	newCtx, newGw = newGameEngine(t)
-	err = mySQLTxHandler.RestoreStateFromTxs(newCtx, 3, "")
+	err = saveTxHandler.RestoreStateFromTxs(newCtx, 3, "")
 	require.Nil(t, err)
 
 	p1 = personTable.Get(newGw, p1Entity)
@@ -206,7 +254,8 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 	assert.Equal(t, p3Pos2, p3.Position)
 }
 
-func TestMySQLMultipleGames_SaveState(t *testing.T) {
+// core test multiple games save state
+func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *db.MySQLSaveStateHandler, saveTxHandler1 *db.MySQLSaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *db.MySQLSaveStateHandler, saveTxHandler2 *db.MySQLSaveTransactionHandler, db2 *sql.DB) {
 	game1System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		personTable.AddSpecific(ctx.W, 69, Person{
 			Name: testName1,
@@ -229,22 +278,18 @@ func TestMySQLMultipleGames_SaveState(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
-	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
-	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
 	game2.SaveTransactionsHandler = saveTxHandler2
 
-	server.TickWorldForward(game1, 1)
-	server.TickWorldForward(game2, 1)
+	utils.TickWorldForward(game1, 1)
+	utils.TickWorldForward(game2, 1)
 
 	game1.SaveStateHandler.SaveState(game1.PendingStateUpdatesToSave)
 	game2.SaveStateHandler.SaveState(game2.PendingStateUpdatesToSave)
@@ -260,17 +305,13 @@ func TestMySQLMultipleGames_SaveState(t *testing.T) {
 
 	player1 := personTable.Get(newGw1, 69)
 	assert.Equal(t, testName1, player1.Name)
+
+	player2 := personTable.Get(newGw2, 69)
+	assert.Equal(t, testName2, player2.Name)
 }
 
-func TestMySQLMultipleGames_SaveState(t *testing.T) {
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
-
-	coreTestMultipleGamesSaveState(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
-}
-
-func TestMultipleGames_SaveTx(t *testing.T) {
-<<<<<<< HEAD
+// core test multiple games save transactions
+func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *db.MySQLSaveStateHandler, saveTxHandler1 *db.MySQLSaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *db.MySQLSaveStateHandler, saveTxHandler2 *db.MySQLSaveTransactionHandler, db2 *sql.DB) {
 	game1System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		tickNumber := ctx.GameCtx.GameTick.TickNumber
 		w := ctx.W
@@ -315,29 +356,21 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
-
-	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
-
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
-
-	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
-
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
 	game2.SaveTransactionsHandler = saveTxHandler2
 
-	server.TickWorldForward(game1, 2)
-	server.TickWorldForward(game2, 2)
+	utils.TickWorldForward(game1, 2)
+	utils.TickWorldForward(game2, 2)
 
-	game1.SaveTransactionsHandler.SaveTransactions(game1.TransactionsToSave)
-	game2.SaveTransactionsHandler.SaveTransactions(game2.TransactionsToSave)
+	game1.SaveTransactionsHandler.SaveTransactions(game1, game1.TransactionsToSave)
+	game2.SaveTransactionsHandler.SaveTransactions(game2, game2.TransactionsToSave)
 
 	newGameEngine1 := newGameEngine(t, game1System, "")
 	newGameEngine2 := newGameEngine(t, game2System, "")
@@ -370,81 +403,4 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	player3 := personTable.Get(newGameEngine2.World, testEntity2)
 	assert.Equal(t, testName1, player3.Name)
 	assert.Equal(t, testWallet2, player3.MainWallet)
-
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
-
-	coreTestMultipleGamesSaveTransactions(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
-}
-
-func setupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
-	var db *sql.DB
-	db, err := sql.Open("txdb", sqlDSN)
-	if err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, db.Ping())
-
-	if deleteTables {
-		deleteAllTables(t, db)
-	}
-
-	sqlDialector := mysql.New(mysql.Config{Conn: db})
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, 0, accessors)
-	require.Nil(t, err)
-
-	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
-}
-
-func deleteAllTables(t *testing.T, db *sql.DB) {
-	rows, err := db.Query("SHOW TABLES")
-	require.Nil(t, err)
-	defer rows.Close()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		require.Nil(t, rows.Scan(&table))
-		tables = append(tables, table)
-	}
-
-	// Drop each table
-	for _, table := range tables {
-		_, err = db.Exec(fmt.Sprintf("DROP TABLE %s", table))
-		if err != nil {
-			fmt.Println("Failed to drop table", table, "err", err)
-		}
-	}
-
-	fmt.Println("-> Existing tables have been removed")
-}
-
-func deleteAllTablesSQLite(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-
-	// get list of table names
-	tableNames := getSQLiteTableNames(db)
-
-	// Iterate through the table names and drop each table
-	for _, tableName := range tableNames {
-		if err := db.Exec("DROP TABLE " + tableName + ";").Error; err != nil {
-			panic("Failed to drop table " + tableName + ": " + err.Error())
-		}
-	}
-
-	// verify that table names array is empty
-	updatedTableNames := getSQLiteTableNames(db)
-	assert.Equal(t, 0, len(updatedTableNames))
-
-}
-
-func getSQLiteTableNames(db *gorm.DB) []string {
-	var tableNames []string
-	if err := db.Raw("SELECT name FROM sqlite_master WHERE type='table';").Scan(&tableNames).Error; err != nil {
-		panic("Failed to fetch table names: " + err.Error())
-	}
-	return tableNames
 }
