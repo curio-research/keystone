@@ -1,14 +1,27 @@
 package test
 
 import (
-	"github.com/curio-research/keystone/test/testutils"
+	"database/sql"
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/curio-research/keystone/db"
+	gamedb "github.com/curio-research/keystone/db"
+
+	"github.com/curio-research/keystone/utils"
+
+	"github.com/DATA-DOG/go-txdb"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
+	"github.com/joho/godotenv"
 )
 
 func TestMySQLSaveStateHandler(t *testing.T) {
@@ -410,3 +423,87 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	assert.Equal(t, testName1, player3.Name)
 	assert.Equal(t, testWallet2, player3.MainWallet)
 }
+<<<<<<< HEAD
+=======
+
+func setupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
+	var db *sql.DB
+	db, err := sql.Open("txdb", sqlDSN)
+	if err != nil {
+		require.Nil(t, err)
+	}
+	require.Nil(t, db.Ping())
+
+	if deleteTables {
+		deleteAllTables(t, db)
+	}
+
+	sqlDialector := mysql.New(mysql.Config{Conn: db})
+	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, 0, accessors)
+	require.Nil(t, err)
+
+	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
+}
+
+func deleteAllTables(t *testing.T, db *sql.DB) {
+	rows, err := db.Query("SHOW TABLES")
+	require.Nil(t, err)
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var table string
+		require.Nil(t, rows.Scan(&table))
+		tables = append(tables, table)
+	}
+
+	// Drop each table
+	for _, table := range tables {
+		_, err = db.Exec(fmt.Sprintf("DROP TABLE %s", table))
+		if err != nil {
+			fmt.Println("Failed to drop table", table, "err", err)
+		}
+	}
+
+	fmt.Println("-> Existing tables have been removed")
+}
+
+type Soldier struct {
+	Position state.Pos `gorm:"embedded"`
+	Health   int
+}
+
+func deleteAllTablesSQLite(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// add a table
+	// TODO: this is just for testing
+	// db.Migrator().CreateTable(&Soldier{})
+
+	// get list of table names
+	tableNames := getSQLiteTableNames(db)
+
+	// Iterate through the table names and drop each table
+	for _, tableName := range tableNames {
+		if err := db.Exec("DROP TABLE " + tableName + ";").Error; err != nil {
+			panic("Failed to drop table " + tableName + ": " + err.Error())
+		}
+	}
+
+	// verify that table names array is empty
+	updatedTableNames := getSQLiteTableNames(db)
+	assert.Equal(t, 0, len(updatedTableNames))
+
+}
+
+func getSQLiteTableNames(db *gorm.DB) []string {
+	var tableNames []string
+	if err := db.Raw("SELECT name FROM sqlite_master WHERE type='table';").Scan(&tableNames).Error; err != nil {
+		panic("Failed to fetch table names: " + err.Error())
+	}
+	return tableNames
+}
+>>>>>>> a4f59c0 (Make establish connection work)

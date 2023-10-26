@@ -56,8 +56,8 @@ type Person struct {
 	Age        int
 	Address    string
 	Position   state.Pos `gorm:"embedded"`
-	BookId     int       // TODO: if we can automatically solve the linkage that'd be OP
-	Id         int       `gorm:"primaryKey"`
+	BookId     int
+	Id         int `gorm:"primaryKey"`
 }
 
 type Book struct {
