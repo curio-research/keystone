@@ -26,7 +26,7 @@ func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, randSeed 
 		return nil, nil, err
 	}
 
-	txHandler, err := newSQLSaveTransactionHandler(dialector, randSeed, gameId)
+	txHandler, err := newSQLSaveTransactionHandler(dialector, gameId)
 	if err != nil {
 		return nil, nil, err
 	}
