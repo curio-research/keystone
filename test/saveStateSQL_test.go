@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"github.com/curio-research/keystone/test/testutils"
 	"testing"
 
@@ -310,7 +309,6 @@ func TestMultipleGames_SaveState(t *testing.T) {
 	require.Nil(t, saveStateHandler2.RestoreState(newGameEngine2, ""))
 
 	player1 := personTable.Get(newGw1, 69)
-	fmt.Println(player1)
 	assert.Equal(t, testName1, player1.Name)
 
 	player2 := personTable.Get(newGw2, 69)

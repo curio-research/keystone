@@ -309,7 +309,6 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 	req := ctx.Req
 	w := ctx.W
 
-	fmt.Println("tick", ctx.GameCtx.GameTick.TickNumber)
 	playerID := int(req.GetIdentityPayload().GetPlayerId())
 
 	for _, bookInfo := range req.BookInfos {
@@ -353,7 +352,6 @@ type testRemoveRequest struct {
 }
 
 var TestRemoveBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testRemoveRequest]) {
-	fmt.Println("tick2", ctx.GameCtx.GameTick.TickNumber)
 	req := ctx.Req
 	w := ctx.GameCtx.World
 

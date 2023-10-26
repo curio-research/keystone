@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/curio-research/keystone/core"
@@ -38,7 +37,6 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
 				ctx.SaveStateHandler.SaveState(updatesToPublish)
 
 				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
-				fmt.Println("tick number", ctx.GameTick.TickNumber, "tx to save", transactionsToSave)
 				ctx.ClearTransactionsToSave()
 				ctx.SaveTransactionsHandler.SaveTransactions(transactionsToSave)
 			}

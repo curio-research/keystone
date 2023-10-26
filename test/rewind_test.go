@@ -78,19 +78,19 @@ func TestRewind(t *testing.T) {
 
 	time.Sleep(time.Second * 5) // TODO have a sleep for 2 seconds before resetting the world?
 
-	//resetWorldAndTick(ctx)
-	//sendPostRequest(t, s, "rewindState", server.RewindStateRequest{
-	//	ElapsedSeconds: 1,
-	//	GameId:         testGameID1,
-	//})
-	//
-	//book1 := bookTable.Get(ctx.World, book1Entity)
-	//assert.Equal(t, testBookTitle1, book1.Title)
-	//assert.Equal(t, testBookAuthor1, book1.Author)
-	//
-	//book2 := bookTable.Get(ctx.World, book2Entity)
-	//assert.Equal(t, testBookTitle2, book2.Title)
-	//assert.Equal(t, testBookAuthor2, book2.Author)
+	resetWorldAndTick(ctx)
+	sendPostRequest(t, s, "rewindState", server.RewindStateRequest{
+		ElapsedSeconds: 1,
+		GameId:         testGameID1,
+	})
+
+	book1 := bookTable.Get(ctx.World, book1Entity)
+	assert.Equal(t, testBookTitle1, book1.Title)
+	assert.Equal(t, testBookAuthor1, book1.Author)
+
+	book2 := bookTable.Get(ctx.World, book2Entity)
+	assert.Equal(t, testBookTitle2, book2.Title)
+	assert.Equal(t, testBookAuthor2, book2.Author)
 
 	resetWorldAndTick(ctx)
 	sendPostRequest(t, s, "rewindState", server.RewindStateRequest{
@@ -98,10 +98,10 @@ func TestRewind(t *testing.T) {
 		GameId:         ctx.GameId,
 	})
 
-	book1 := bookTable.Get(ctx.World, book1Entity)
+	book1 = bookTable.Get(ctx.World, book1Entity)
 	assert.Equal(t, 0, book1.Id)
 
-	book2 := bookTable.Get(ctx.World, book2Entity)
+	book2 = bookTable.Get(ctx.World, book2Entity)
 	assert.Equal(t, testBookTitle1, book2.Title)
 	assert.Equal(t, testBookAuthor2, book2.Author)
 }
