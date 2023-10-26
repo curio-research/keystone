@@ -1,8 +1,8 @@
 package db
 
 import (
+	"fmt"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/utils"
 	"gorm.io/gorm"
 )
 
@@ -48,8 +48,11 @@ func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.Tra
 
 // initialize the world to the initial state before calling
 func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx, tickNumber int, _ string) error {
-	gw := ctx.World
+	if ctx.GameTick.TickNumber != 1 {
+		return fmt.Errorf("game tick was not reset to 1")
+	}
 
+	gw := ctx.World
 	entries, err := h.transactionTable.GetEntriesUntilTick(tickNumber)
 	if err != nil {
 		return err
@@ -58,7 +61,7 @@ func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx,
 	for _, entry := range entries {
 		server.AddSystemTransaction(gw, entry.Tick, entry.Type, entry.Data, "", false)
 	}
-	utils.TickWorldForward(ctx, tickNumber)
+	server.TickWorldForward(ctx, tickNumber-1)
 
 	return nil
 }

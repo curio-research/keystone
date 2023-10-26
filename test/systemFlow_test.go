@@ -1,9 +1,9 @@
 package test
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
 	"testing"
@@ -27,7 +27,7 @@ func init() {
 }
 
 func TestAddBook(t *testing.T) {
-	e, ws, s, _ := startServer(t)
+	e, ws, s, _, _ := startTestServer(t, core.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -86,7 +86,7 @@ func tearDown(ws *websocket.Conn, server *http.Server) {
 }
 
 func TestUpdate(t *testing.T) {
-	e, ws, s, mockErrorHandler := startServer(t)
+	e, ws, s, mockErrorHandler, _ := startTestServer(t, core.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -197,7 +197,7 @@ func TestDeleteAndFilter(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			e, ws, s, errorHandler := startServer(t)
+			e, ws, s, errorHandler, _ := startTestServer(t, core.Dev)
 			defer tearDown(ws, s)
 
 			w := e.World
@@ -270,26 +270,24 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	return nil
 }
 
-func startServer(t *testing.T, mode core.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler) {
+func startTestServer(t *testing.T, mode core.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, err := testutils.StartMainServer(mode, wsPort, "", 1, testSchemaToAccessors)
+	s, e, db, err := testutils.Server(t, mode, wsPort, 1, testSchemaToAccessors)
 	require.Nil(t, err)
 
 	mockErrorHandler := testutils.NewMockErrorHandler()
 	e.SystemErrorHandler = mockErrorHandler
 
+	addr := ":" + strconv.Itoa(port)
 	httpServer := &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
+		Addr:    addr,
 		Handler: s,
 	}
 
-	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-	require.Nil(t, err)
-
 	go func() {
-		fmt.Println("starting server")
-		err := http.Serve(l, s)
+		fmt.Println("starting server at ", addr)
+		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("http server closed with unexpected error %v", err)
 			return
@@ -304,13 +302,14 @@ func startServer(t *testing.T, mode core.GameMode) (*server.EngineCtx, *websocke
 	ws, err := testutils.SetupWS(t, wsPort)
 	require.Nil(t, err)
 
-	return e, ws, httpServer, mockErrorHandler
+	return e, ws, httpServer, mockErrorHandler, db
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
 	req := ctx.Req
 	w := ctx.W
 
+	fmt.Println("tick", ctx.GameCtx.GameTick.TickNumber)
 	playerID := int(req.GetIdentityPayload().GetPlayerId())
 
 	for _, bookInfo := range req.BookInfos {
@@ -343,7 +342,6 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 			book.Title = bookInfo.Title
 			book.Author = bookInfo.Author
 			BookTable.Set(w, int(bookInfo.Entity), book)
-
 		}
 	}
 })
@@ -355,6 +353,7 @@ type testRemoveRequest struct {
 }
 
 var TestRemoveBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testRemoveRequest]) {
+	fmt.Println("tick2", ctx.GameCtx.GameTick.TickNumber)
 	req := ctx.Req
 	w := ctx.GameCtx.World
 

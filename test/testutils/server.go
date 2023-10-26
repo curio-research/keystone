@@ -1,9 +1,10 @@
 package testutils
 
 import (
-	"github.com/curio-research/keystone/db"
+	"database/sql"
 	"strconv"
 	"sync"
+	"testing"
 
 	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
@@ -14,7 +15,7 @@ import (
 )
 
 // TODO refactor http to also be started inside here
-func StartMainServer(mode core.GameMode, websocketPort int, mySQLdsn string, randSeedNumber int, schemaToTableAccessors map[interface{}]*core.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, error) {
+func Server(t *testing.T, mode core.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*core.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -40,24 +41,30 @@ func StartMainServer(mode core.GameMode, websocketPort int, mySQLdsn string, ran
 		RandSeed: randSeedNumber,
 	}
 
-	if mode == core.Prod {
-		err := db.InitializeSQLHandlers(gameCtx, mySQLdsn, schemaToTableAccessors)
-		if err != nil {
-			return nil, nil, err
-		}
+	var db *sql.DB
+	if mode == core.Prod || mode == core.DevSQL {
+		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, gameCtx.GameId, true, schemaToTableAccessors)
+		gameCtx.SaveStateHandler = saveStateHandler
+		gameCtx.SaveTransactionsHandler = saveTxHandler
+		db = testDB
 
 		server.RegisterHTTPSQLRoutes(gameCtx, s)
+		saveInterval := core.SaveStateInterval
+		if mode == core.DevSQL {
+			saveInterval = core.DevSQLSaveStateInterval
+		}
+		server.SetupSaveStateLoop(gameCtx, saveInterval)
 	}
 
 	// initialize a websocket streaming server for both incoming and outgoing requests
 	streamServer, err := server.NewStreamServer(s, gameCtx, SocketRequestRouter, websocketPort)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	gameCtx.Stream = streamServer
-	gameTick.Setup(gameCtx, gameTick.Schedule)
+	//gameTick.Setup(gameCtx, gameTick.Schedule)
 
-	return s, gameCtx, nil
+	return s, gameCtx, db, nil
 }
 
 // message types

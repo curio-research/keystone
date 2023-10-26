@@ -1,8 +1,6 @@
-package state
+package server
 
 import (
-	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -14,7 +12,7 @@ type RewindStateRequest struct {
 
 // TODO will only one person have the power to restore the state
 // initialize the world before calling it
-func HandleRewindState(ctx *server.EngineCtx) gin.HandlerFunc {
+func HandleRewindState(ctx *EngineCtx) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if ctx.IsRestoringState {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -23,7 +21,7 @@ func HandleRewindState(ctx *server.EngineCtx) gin.HandlerFunc {
 			return
 		}
 
-		req, err := server.DecodeRequestBody[RewindStateRequest](c)
+		req, err := DecodeRequestBody[RewindStateRequest](c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "invalid request body",
@@ -33,9 +31,9 @@ func HandleRewindState(ctx *server.EngineCtx) gin.HandlerFunc {
 
 		// TODO can we assume they already did this?
 		ctx.IsRestoringState = true
-		ctx.IsLive = false
 
-		err = ctx.SaveTransactionsHandler.RestoreStateFromTxs(ctx, utils.CalcFutureTickFromS(ctx, req.ElapsedSeconds), req.GameId)
+		futureTick := CalcFutureTickFromS(ctx, req.ElapsedSeconds)
+		err = ctx.SaveTransactionsHandler.RestoreStateFromTxs(ctx, futureTick, req.GameId)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
@@ -43,7 +41,6 @@ func HandleRewindState(ctx *server.EngineCtx) gin.HandlerFunc {
 			return
 		}
 
-		ctx.IsLive = true
 		ctx.IsRestoringState = false
 	}
 }

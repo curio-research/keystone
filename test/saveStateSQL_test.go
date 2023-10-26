@@ -1,39 +1,19 @@
 package test
 
 import (
-	"database/sql"
 	"fmt"
-	"github.com/curio-research/keystone/db"
-	gamedb "github.com/curio-research/keystone/db"
-	"os"
+	"github.com/curio-research/keystone/test/testutils"
 	"testing"
 
-	"github.com/curio-research/keystone/utils"
-
-	"github.com/DATA-DOG/go-txdb"
 	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
-
-	"github.com/joho/godotenv"
 )
 
-var sqlDSN string
-
-func init() {
-	if err := godotenv.Load("../.env"); err != nil {
-		panic(err)
-	}
-	sqlDSN = os.Getenv("SQL_DSN")
-
-	txdb.Register("txdb", "mysql", sqlDSN)
-}
-
 func TestMySQLSaveStateHandler(t *testing.T) {
-	mySQLStateHandler, _, db := setupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	var player1Entity, player2Entity, nt1Entity, nt2Entity int
@@ -60,7 +40,7 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
-	utils.TickWorldForward(gameEngine, 1)
+	server.TickWorldForward(gameEngine, 1)
 	require.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
 	newGameEngine := initializeTestWorld()
@@ -88,7 +68,7 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_Removal(t *testing.T) {
-	mySQLStateHandler, _, db := setupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	var player1Entity int
@@ -107,10 +87,10 @@ func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
-	utils.TickWorldForward(gameEngine, 1)
+	server.TickWorldForward(gameEngine, 1)
 	assert.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
-	utils.TickWorldForward(gameEngine, 1)
+	server.TickWorldForward(gameEngine, 1)
 	assert.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
 	newGameEngine := initializeTestWorld()
@@ -123,7 +103,7 @@ func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
-	mySQLStateHandler, _, db := setupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
@@ -139,7 +119,7 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
-	utils.TickWorldForward(gameEngine, 1)
+	server.TickWorldForward(gameEngine, 1)
 	require.Nil(t, mySQLStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
 
 	newGameEngine := initializeTestWorld()
@@ -157,7 +137,7 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 }
 
 func TestMySQLRestoreStateFromTxs(t *testing.T) {
-	_, mySQLTxHandler, db := setupTestDB(t, testGameID2, true, testSchemaToAccessors)
+	_, mySQLTxHandler, db := testutils.SetupTestDB(t, testGameID2, true, testSchemaToAccessors)
 	defer db.Close()
 
 	var p1Entity, p2Entity, p3Entity = testEntity1, testEntity2, testEntity3
@@ -233,7 +213,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 	}, "", true)
 
 	// apply transactions to the world
-	utils.TickWorldForward(initialGameEngine, 3)
+	server.TickWorldForward(initialGameEngine, 3)
 	require.Nil(t, mySQLTxHandler.SaveTransactions(initialGameEngine.TransactionsToSave))
 
 	// reinitializing tick 1
@@ -302,20 +282,20 @@ func TestMultipleGames_SaveState(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
-	saveStateHandler1, saveTxHandler1, db1 := setupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
-	saveStateHandler2, saveTxHandler2, db2 := setupTestDB(t, testGameID2, false, testSchemaToAccessors)
+	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
 	game2.SaveTransactionsHandler = saveTxHandler2
 
-	utils.TickWorldForward(game1, 1)
-	utils.TickWorldForward(game2, 1)
+	server.TickWorldForward(game1, 1)
+	server.TickWorldForward(game2, 1)
 
 	game1.SaveStateHandler.SaveState(game1.PendingStateUpdatesToSave)
 	game2.SaveStateHandler.SaveState(game2.PendingStateUpdatesToSave)
@@ -382,20 +362,20 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	game1 := newGameEngine(t, game1System, testGameID1)
 	game2 := newGameEngine(t, game2System, testGameID2)
 
-	saveStateHandler1, saveTxHandler1, db1 := setupTestDB(t, testGameID1, true, testSchemaToAccessors)
+	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db1.Close()
 
 	game1.SaveStateHandler = saveStateHandler1
 	game1.SaveTransactionsHandler = saveTxHandler1
 
-	saveStateHandler2, saveTxHandler2, db2 := setupTestDB(t, testGameID2, false, testSchemaToAccessors)
+	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupTestDB(t, testGameID2, false, testSchemaToAccessors)
 	defer db2.Close()
 
 	game2.SaveStateHandler = saveStateHandler2
 	game2.SaveTransactionsHandler = saveTxHandler2
 
-	utils.TickWorldForward(game1, 2)
-	utils.TickWorldForward(game2, 2)
+	server.TickWorldForward(game1, 2)
+	server.TickWorldForward(game2, 2)
 
 	game1.SaveTransactionsHandler.SaveTransactions(game1.TransactionsToSave)
 	game2.SaveTransactionsHandler.SaveTransactions(game2.TransactionsToSave)
@@ -431,46 +411,4 @@ func TestMultipleGames_SaveTx(t *testing.T) {
 	player3 := personTable.Get(newGameEngine2.World, testEntity2)
 	assert.Equal(t, testName1, player3.Name)
 	assert.Equal(t, testWallet2, player3.MainWallet)
-}
-
-func setupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*core.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
-	var db *sql.DB
-	db, err := sql.Open("txdb", sqlDSN)
-	if err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, db.Ping())
-
-	if deleteTables {
-		deleteAllTables(t, db)
-	}
-
-	sqlDialector := mysql.New(mysql.Config{Conn: db})
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, 0, accessors)
-	require.Nil(t, err)
-
-	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
-}
-
-func deleteAllTables(t *testing.T, db *sql.DB) {
-	rows, err := db.Query("SHOW TABLES")
-	require.Nil(t, err)
-	defer rows.Close()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		require.Nil(t, rows.Scan(&table))
-		tables = append(tables, table)
-	}
-
-	// Drop each table
-	for _, table := range tables {
-		_, err = db.Exec(fmt.Sprintf("DROP TABLE %s", table))
-		if err != nil {
-			fmt.Println("Failed to drop table", table, "err", err)
-		}
-	}
-
-	fmt.Println("-> Existing tables have been removed")
 }

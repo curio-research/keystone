@@ -40,15 +40,15 @@ func newSQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAc
 }
 
 // initialize mySQL tables for saving state updates
-func (handler *MySQLSaveStateHandler) initializeDBTables() error {
-	db := handler.dbConnection
+func (m *MySQLSaveStateHandler) initializeDBTables() error {
+	db := m.dbConnection
 	if db == nil {
 		return fmt.Errorf("db connection is nil")
 	}
 
 	// all tables that need to be created
 	allSchemas := []any{}
-	for schema, _ := range handler.schemasToAccessors {
+	for schema, _ := range m.schemasToAccessors {
 		if reflect.TypeOf(schema).Kind() != reflect.Pointer {
 			return fmt.Errorf("schema %v is not a pointer to the struct", schema)
 		}
@@ -65,15 +65,15 @@ func (handler *MySQLSaveStateHandler) initializeDBTables() error {
 }
 
 // save state updates to mySQL database
-func (handler *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate) error {
+func (m *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate) error {
 	// process table updates
 	tableUpdateOperationsByTable, tableRemovalOperationsByTable := processUpdatesForUpload(tableUpdates)
 
 	// update operations
 	for table, updates := range tableUpdateOperationsByTable {
-		arr := handler.castToSchemaArray(table, updates)
+		arr := m.castToSchemaArray(table, updates)
 		if arr != nil {
-			tx := handler.dbConnection.Save(arr)
+			tx := m.dbConnection.Save(arr)
 			if tx.Error != nil {
 				return tx.Error
 			}
@@ -82,8 +82,8 @@ func (handler *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate)
 
 	// removal operations
 	for table, removals := range tableRemovalOperationsByTable {
-		arr := handler.castToSchemaArray(table, removals)
-		tx := handler.dbConnection.Delete(arr)
+		arr := m.castToSchemaArray(table, removals)
+		tx := m.dbConnection.Delete(arr)
 		if tx.Error != nil {
 			return tx.Error
 		}
@@ -93,9 +93,9 @@ func (handler *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate)
 }
 
 // given a schema type, use the mapping from tables to cast to an array of that type
-func (handler *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
+func (m *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
 	var accessor *core.TableBaseAccessor[any]
-	for _, schemaAccessor := range handler.schemasToAccessors {
+	for _, schemaAccessor := range m.schemasToAccessors {
 		if strings.Contains(schemaAccessor.Name(), schemaType) {
 			accessor = schemaAccessor
 			break
@@ -118,7 +118,7 @@ func (handler *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals 
 }
 
 // restore state updates from mySQL database
-func (handler *MySQLSaveStateHandler) RestoreState(ctx *server.EngineCtx, _ string) error {
+func (m *MySQLSaveStateHandler) RestoreState(ctx *server.EngineCtx, _ string) error {
 	gw := ctx.World
 	for _, table := range gw.Tables {
 		if len(table.EntityToValue) != 0 {
@@ -126,8 +126,8 @@ func (handler *MySQLSaveStateHandler) RestoreState(ctx *server.EngineCtx, _ stri
 		}
 	}
 
-	for schema, tableAccessor := range handler.schemasToAccessors {
-		rows, err := handler.dbConnection.Table(tableNameWithPrefix(tableAccessor.Name(), handler.gameID)).Rows()
+	for schema, tableAccessor := range m.schemasToAccessors {
+		rows, err := m.dbConnection.Table(tableNameWithPrefix(tableAccessor.Name(), m.gameID)).Rows()
 		if err != nil {
 			return err
 		}
