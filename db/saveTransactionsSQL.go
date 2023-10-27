@@ -2,20 +2,17 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/utils"
 	"gorm.io/gorm"
 )
 
-const restoreTickRate = 100
-
 type MySQLSaveTransactionHandler struct {
 	transactionTable *SQLTransactionTable
-	randSeed         int
 	gameId           string
 }
 
-func newSQLSaveTransactionHandler(dialector gorm.Dialector, randSeed int, gameID string) (*MySQLSaveTransactionHandler, error) {
+func newSQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLSaveTransactionHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err
@@ -28,13 +25,12 @@ func newSQLSaveTransactionHandler(dialector gorm.Dialector, randSeed int, gameID
 
 	handler := &MySQLSaveTransactionHandler{
 		transactionTable: txTable,
-		randSeed:         randSeed,
 		gameId:           gameID,
 	}
 	return handler, nil
 }
 
-func (h *MySQLSaveTransactionHandler) SaveTransactions(ctx *server.EngineCtx, transactions []server.TransactionSchema) error {
+func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.TransactionSchema) error {
 	updatesForSql := []TransactionSQLFormat{}
 	for _, transaction := range transactions {
 		updatesForSql = append(updatesForSql, TransactionSQLFormat{
@@ -49,14 +45,13 @@ func (h *MySQLSaveTransactionHandler) SaveTransactions(ctx *server.EngineCtx, tr
 	return h.transactionTable.AddEntries(updatesForSql...)
 }
 
+// initialize the world to the initial state before calling
 func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx, tickNumber int, _ string) error {
-	gw := ctx.World
-	for _, table := range gw.Tables {
-		if len(table.EntityToValue) != 0 {
-			return fmt.Errorf("table %s is not empty", table.Name)
-		}
+	if ctx.GameTick.TickNumber != 1 {
+		return fmt.Errorf("game tick was not reset to 1")
 	}
 
+	gw := ctx.World
 	entries, err := h.transactionTable.GetEntriesUntilTick(tickNumber)
 	if err != nil {
 		return err
@@ -65,7 +60,7 @@ func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx,
 	for _, entry := range entries {
 		server.AddSystemTransaction(gw, entry.Tick, entry.Type, entry.Data, "", false)
 	}
-	utils.TickWorldForward(ctx, tickNumber)
+	server.TickWorldForward(ctx, tickNumber)
 
 	return nil
 }

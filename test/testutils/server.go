@@ -1,8 +1,10 @@
 package testutils
 
 import (
+	"database/sql"
 	"strconv"
 	"sync"
+	"testing"
 
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
@@ -12,7 +14,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNumber int) (*gin.Engine, *server.EngineCtx, error) {
+// TODO refactor http to also be started inside here
+func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -38,18 +41,29 @@ func StartMainServer(mode string, websocketPort int, mySQLdsn string, randSeedNu
 		RandSeed: randSeedNumber,
 	}
 
+	var db *sql.DB
+	if mode == server.Prod || mode == server.DevSQL {
+		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, gameCtx.GameId, true, schemaToTableAccessors)
+		gameCtx.SaveStateHandler = saveStateHandler
+		gameCtx.SaveTransactionsHandler = saveTxHandler
+		db = testDB
+
+		server.RegisterHTTPSQLRoutes(gameCtx, s)
+		saveInterval := server.SaveStateInterval
+		if mode == server.DevSQL {
+			saveInterval = server.DevSQLSaveStateInterval
+		}
+		server.SetupSaveStateLoop(gameCtx, saveInterval)
+	}
+
 	// initialize a websocket streaming server for both incoming and outgoing requests
 	streamServer, err := server.NewStreamServer(s, gameCtx, SocketRequestRouter, websocketPort)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	gameCtx.Stream = streamServer
-	gameTick.Setup(gameCtx, gameTick.Schedule)
 
-	// setup server routes
-	// TODO: Restore HTTP routes in future integration tests
-
-	return s, gameCtx, nil
+	return s, gameCtx, db, nil
 }
 
 // message types

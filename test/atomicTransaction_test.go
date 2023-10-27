@@ -5,7 +5,6 @@ import (
 
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
-	"github.com/curio-research/keystone/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +24,7 @@ func TestWorldUpdatedOnSuccess_RequestSystem(t *testing.T) {
 	}
 
 	server.QueueTxAtTime(ctx.World, 1, req, "", true)
-	utils.TickWorldForward(ctx, 1)
+	server.TickWorldForward(ctx, 1)
 
 	person1 := personTable.Get(ctx.World, 27)
 	assert.Equal(t, testName1, person1.Name)
@@ -50,7 +49,7 @@ func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
 	}
 
 	server.QueueTxAtTime(ctx.World, 1, req, "", true)
-	utils.TickWorldForward(ctx, 1)
+	server.TickWorldForward(ctx, 1)
 
 	person1 := personTable.Get(ctx.World, 27)
 	assert.NotEqual(t, testName1, person1.Name)
@@ -62,7 +61,7 @@ func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
 func TestWorldUpdatedOnSuccess_GeneralSystem(t *testing.T) {
 	ctx := initializeTestWorld(TestPersonSystem)
 
-	utils.TickWorldForward(ctx, 1)
+	server.TickWorldForward(ctx, 1)
 
 	person := personTable.Get(ctx.World, personEntity)
 	assert.Equal(t, testName1, person.Name)
@@ -74,7 +73,7 @@ func TestWorldUpdatedOnSuccess_GeneralSystem(t *testing.T) {
 func TestWorldNotUpdatedOnFailure_GeneralSystem(t *testing.T) {
 	ctx := initializeTestWorld(TestPersonSystemWithError)
 
-	utils.TickWorldForward(ctx, 1)
+	server.TickWorldForward(ctx, 1)
 
 	person := personTable.Get(ctx.World, 0)
 	assert.NotEqual(t, testName1, person.Name)

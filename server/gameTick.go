@@ -20,7 +20,7 @@ type GameTick struct {
 	// the current game tick number
 	TickNumber int
 
-	// how often the game ticks in milliseconds
+	// per how many milliseconds the game ticks
 	TickRateMs int
 
 	// schedule of ticks and corresponding functions
@@ -206,10 +206,10 @@ func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 	}
 }
 
-func NewGameTick(tickRate int) *GameTick {
+func NewGameTick(tickRateMs int) *GameTick {
 	return &GameTick{
 		TickNumber: 1,
-		TickRateMs: tickRate,
+		TickRateMs: tickRateMs,
 	}
 }
 
@@ -232,6 +232,7 @@ func (g *GameTick) Setup(ctx *EngineCtx, tickSchedule *TickSchedule) {
 							tickSystem.TickFunction(ctx)
 						}
 					}
+
 					ctx.AddStateUpdatesToSave()
 
 					DeleteAllTicksAtTickNumber(ctx.World, g.TickNumber)
@@ -255,11 +256,14 @@ func ShouldTriggerTick(tickNumber int, tickRate int, frequencyInMs int) bool {
 }
 
 // used for tests
-func TickGameSystems(ctx *EngineCtx, tickSchedule *TickSchedule) {
+func TickGameSystems(ctx *EngineCtx) {
 	ctx.AddTransactionsToSave()
-	for _, tickSystem := range tickSchedule.ScheduledTickSystems {
+	gameTick := ctx.GameTick
+	for _, tickSystem := range gameTick.Schedule.ScheduledTickSystems {
 		tickSystem.TickFunction(ctx)
 	}
+	DeleteAllTicksAtTickNumber(ctx.World, gameTick.TickNumber)
+
 	ctx.AddStateUpdatesToSave()
 }
 
