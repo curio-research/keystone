@@ -214,7 +214,7 @@ func NewGameTick(tickRateMs int) *GameTick {
 }
 
 // set up a game tick
-func (g *GameTick) Setup(ctx *EngineCtx, tickSchedule *TickSchedule) {
+func (g *GameTick) Setup(ctx *EngineCtx) {
 	tickerTime := time.Duration(g.TickRateMs) * time.Millisecond
 	ticker := time.NewTicker(tickerTime)
 
@@ -227,7 +227,7 @@ func (g *GameTick) Setup(ctx *EngineCtx, tickSchedule *TickSchedule) {
 				if ctx.IsLive {
 					ctx.AddTransactionsToSave()
 
-					for _, tickSystem := range tickSchedule.ScheduledTickSystems {
+					for _, tickSystem := range g.Schedule.ScheduledTickSystems {
 						if ShouldTriggerTick(g.TickNumber, g.TickRateMs, tickSystem.TickInterval) {
 							tickSystem.TickFunction(ctx)
 						}

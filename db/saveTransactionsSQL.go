@@ -12,7 +12,7 @@ type MySQLSaveTransactionHandler struct {
 	gameId           string
 }
 
-func newSQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLSaveTransactionHandler, error) {
+func SQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLSaveTransactionHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err

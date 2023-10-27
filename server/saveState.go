@@ -21,11 +21,12 @@ type ISaveTransactions interface {
 }
 
 // game loop that triggers the save world state
-func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
+func SetupSaveStateLoop(ctx *EngineCtx, saveInterval time.Duration) {
 	tickerTime := time.Second
 	if saveInterval != 0 {
-		tickerTime = time.Duration(saveInterval) * time.Second
+		tickerTime = saveInterval
 	}
+
 	ticker := time.NewTicker(tickerTime)
 
 	go func() {

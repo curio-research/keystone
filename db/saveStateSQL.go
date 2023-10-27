@@ -19,7 +19,7 @@ type MySQLSaveStateHandler struct {
 }
 
 // initialize connection mySQL
-func newSQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, error) {
+func SQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err

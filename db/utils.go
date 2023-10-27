@@ -37,12 +37,12 @@ func InitializeSQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, ac
 }
 
 func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
-	saveStateHandler, err := newSQLSaveStateHandler(dialector, gameId, accessors)
+	saveStateHandler, err := SQLSaveStateHandler(dialector, gameId, accessors)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txHandler, err := newSQLSaveTransactionHandler(dialector, gameId)
+	txHandler, err := SQLSaveTransactionHandler(dialector, gameId)
 	if err != nil {
 		return nil, nil, err
 	}

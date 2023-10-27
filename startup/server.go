@@ -1,14 +1,16 @@
 package startup
 
 import (
-	"database/sql"
+	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
 	"sync"
+	"time"
 )
 
-func NewGameEngine(tickRate int, setupDB bool) (*server.EngineCtx, error) {
+func NewGameEngine(tickRate, randSeed int) *server.EngineCtx {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -18,7 +20,6 @@ func NewGameEngine(tickRate int, setupDB bool) (*server.EngineCtx, error) {
 	gameTick := server.NewGameTick(tickRate)
 	gameTick.Schedule = server.NewTickSchedule()
 
-	// TODO: Kevin: create handler for this. less footgun plz!
 	server.RegisterDefaultTables(gameWorld)
 
 	// this is the master game context being passed around, containing pointers to everything
@@ -28,36 +29,64 @@ func NewGameEngine(tickRate int, setupDB bool) (*server.EngineCtx, error) {
 		World:                  gameWorld,
 		GameTick:               gameTick,
 		TransactionsToSaveLock: sync.Mutex{},
-		SystemErrorHandler:     systemErrorHandler,
-		SystemBroadcastHandler: systemBroadcastHandler,
-		RandSeed:               randSeedNumber,
+		RandSeed:               randSeed,
 	}
 
-	var db *sql.DB
-	if setupDB {
-		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, gameCtx.GameId, true, schemaToTableAccessors)
-		gameCtx.SaveStateHandler = saveStateHandler
-		gameCtx.SaveTransactionsHandler = saveTxHandler
-		db = testDB
-
-		RegisterHTTPSQLRoutes(gameCtx, s)
-		saveInterval := server.SaveStateInterval
-		if mode == server.DevSQL {
-			saveInterval = server.DevSQLSaveStateInterval
-		}
-		server.SetupSaveStateLoop(gameCtx, saveInterval)
-	}
-
-	// initialize a websocket streaming server for both incoming and outgoing requests
-	streamServer, err := server.NewStreamServer(s, gameCtx, SocketRequestRouter, websocketPort)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	gameCtx.Stream = streamServer
-
-	return s, gameCtx, db, nil
+	return gameCtx
 }
 
-func SetErrorHandler() {
+func RegisterTables(gameCtx *server.EngineCtx, tables ...state.ITable) {
+	gameCtx.World.AddTables(tables...)
+}
 
+func RegisterSQLHandlers(gameCtx *server.EngineCtx, g *gin.Engine, saveInterval time.Duration, saveStateHandler server.ISaveState, saveTxHandler server.ISaveTransactions) {
+	gameCtx.SaveStateHandler, gameCtx.SaveTransactionsHandler = saveStateHandler, saveTxHandler
+	server.RegisterHTTPSQLRoutes(gameCtx, g)
+	server.SetupSaveStateLoop(gameCtx, saveInterval)
+}
+
+func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
+	// initialize a websocket streaming server for both incoming and outgoing requests
+	streamServer, err := server.NewStreamServer(g, gameCtx, router, websocketPort)
+	if err != nil {
+		return err
+	}
+
+	gameCtx.Stream = streamServer
+	return nil
+}
+
+func RegisterNotificationHandlers(gameCtx *server.EngineCtx, broadcastHandler server.ISystemBroadcastHandler, errorHandler server.ISystemErrorHandler) {
+	gameCtx.SystemBroadcastHandler = broadcastHandler
+	gameCtx.SystemErrorHandler = errorHandler
+}
+
+func Start(gameCtx *server.EngineCtx) error {
+	if gameCtx.SystemErrorHandler == nil {
+		log.Info("system error handler not provided")
+	}
+	if gameCtx.SystemBroadcastHandler == nil {
+		log.Info("system broadcast handler not provided")
+	}
+
+	if gameCtx.SaveTransactionsHandler == nil {
+		log.Info("save transactions handler not provided")
+	}
+	if gameCtx.SaveStateHandler == nil {
+		log.Info("save state handler not provided")
+	}
+
+	if gameCtx.Stream == nil {
+		log.Info("websocket routes not registered")
+	}
+
+	if len(gameCtx.World.Tables) == 0 {
+		return fmt.Errorf("no tables registered")
+	}
+	if len(gameCtx.GameTick.Schedule.ScheduledTickSystems) == 0 {
+		return fmt.Errorf("no systems registered")
+	}
+
+	gameCtx.GameTick.Setup(gameCtx)
+	return nil
 }
