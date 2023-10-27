@@ -2,6 +2,7 @@ package test
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/curio-research/keystone/db"
@@ -19,6 +20,7 @@ var testSQLiteDBPath = "test.db"
 
 // setup local sqlite test db
 func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
+	fmt.Println(2)
 	db, err := sql.Open("sqlite3", testSQLiteDBPath)
 	if err != nil {
 		require.Nil(t, err)
