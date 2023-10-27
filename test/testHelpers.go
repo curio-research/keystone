@@ -130,13 +130,13 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 }
 
 func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
-	gameTick := server.NewGameTick(100)
-
 	// initiate an empty tick schedule
 	tickSchedule := server.NewTickSchedule()
 	for _, system := range systems {
 		tickSchedule.AddTickSystem(0, system)
 	}
+
+	gameTick := server.NewGameTick(server.TickRate)
 	gameTick.Schedule = tickSchedule
 
 	gameWorld := state.NewWorld()

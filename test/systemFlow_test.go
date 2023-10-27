@@ -1,6 +1,7 @@
 package test
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,7 +27,7 @@ func init() {
 }
 
 func TestAddBook(t *testing.T) {
-	e, ws, s, _ := startServer(t)
+	e, ws, s, _, _ := startTestServer(t, server.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -57,6 +58,8 @@ func TestAddBook(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	server.TickWorldForward(e, 2)
+
 	b1 := BookTable.Get(w, specificBookEntity)
 	assert.Equal(t, testBookTitle1, b1.Title)
 	assert.Equal(t, testBookAuthor1, b1.Author)
@@ -85,7 +88,7 @@ func tearDown(ws *websocket.Conn, server *http.Server) {
 }
 
 func TestUpdate(t *testing.T) {
-	e, ws, s, mockErrorHandler := startServer(t)
+	e, ws, s, mockErrorHandler, _ := startTestServer(t, server.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -113,6 +116,8 @@ func TestUpdate(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	server.TickWorldForward(e, 2)
+
 	require.Equal(t, mockErrorHandler.ErrorCount(), 1)
 	assert.Equal(t, "no book to update with entity 0", mockErrorHandler.LastError())
 
@@ -136,6 +141,8 @@ func TestUpdate(t *testing.T) {
 		Entity: int64(b2Entity),
 	})
 	require.Nil(t, err)
+
+	server.TickWorldForward(e, 2)
 
 	b1 = BookTable.Get(w, b1Entity)
 	assert.Equal(t, testBookTitle1, b1.Title)
@@ -196,7 +203,7 @@ func TestDeleteAndFilter(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			e, ws, s, errorHandler := startServer(t)
+			e, ws, s, errorHandler, _ := startTestServer(t, server.Dev)
 			defer tearDown(ws, s)
 
 			w := e.World
@@ -213,6 +220,8 @@ func TestDeleteAndFilter(t *testing.T) {
 				Author: testCase.authorFilter,
 			})
 			require.Nil(t, err)
+
+			server.TickWorldForward(e, 3)
 
 			m := make(map[int]interface{})
 			for _, i := range testCase.remainingEntities {
@@ -264,28 +273,27 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	}
 
 	time.Sleep(time.Millisecond * 100)
-	// time.Sleep(time.Second)
 
 	return nil
 }
 
-func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler) {
-	mode := "dev" // TODO: create enums for this?
+func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, err := testutils.StartMainServer(mode, wsPort, "", 1)
+	s, e, db, err := testutils.Server(t, mode, wsPort, 1, testSchemaToAccessors)
 	require.Nil(t, err)
 
 	mockErrorHandler := testutils.NewMockErrorHandler()
 	e.SystemErrorHandler = mockErrorHandler
 
+	addr := ":" + strconv.Itoa(port)
 	httpServer := &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
+		Addr:    addr,
 		Handler: s,
 	}
 
 	go func() {
-		fmt.Println("starting server")
+		fmt.Println("starting server at ", addr)
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("http server closed with unexpected error %v", err)
@@ -301,7 +309,7 @@ func startServer(t *testing.T) (*server.EngineCtx, *websocket.Conn, *http.Server
 	ws, err := testutils.SetupWS(t, wsPort)
 	require.Nil(t, err)
 
-	return e, ws, httpServer, mockErrorHandler
+	return e, ws, httpServer, mockErrorHandler, db
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
@@ -340,7 +348,6 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 			book.Title = bookInfo.Title
 			book.Author = bookInfo.Author
 			BookTable.Set(w, int(bookInfo.Entity), book)
-
 		}
 	}
 })

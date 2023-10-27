@@ -1,25 +1,23 @@
-package utils
-
-import "github.com/curio-research/keystone/server"
+package server
 
 // ticks the world forward for testing. time machine go brr
-func TickWorldForward(ctx *server.EngineCtx, ticks int) int {
+func TickWorldForward(ctx *EngineCtx, ticks int) int {
 	if ctx.GameTick.Schedule == nil {
 		panic("You need to set a ticker")
 	}
 
 	for i := 0; i < ticks; i++ {
-		server.TickGameSystems(ctx, ctx.GameTick.Schedule)
+		TickGameSystems(ctx)
 		ctx.GameTick.TickNumber++
 	}
 	return ctx.GameTick.TickNumber
 }
 
 // time in milliseconds
-func CalcFutureTickFromMs(ctx *server.EngineCtx, timeInMs int) int {
+func CalcFutureTickFromMs(ctx *EngineCtx, timeInMs int) int {
 	return ctx.GameTick.TickNumber + (timeInMs / ctx.GameTick.TickRateMs)
 }
 
-func CalcFutureTickFromS(ctx *server.EngineCtx, timeInSeconds int) int {
+func CalcFutureTickFromS(ctx *EngineCtx, timeInSeconds int) int {
 	return CalcFutureTickFromMs(ctx, timeInSeconds*1000)
 }
