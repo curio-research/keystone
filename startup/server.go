@@ -23,7 +23,7 @@ func NewGameEngine(tickRate, randSeed int) *server.EngineCtx {
 	server.RegisterDefaultTables(gameWorld)
 
 	// this is the master game context being passed around, containing pointers to everything
-	gameCtx := &server.EngineCtx{ // TODO create a constructor for this
+	gameCtx := &server.EngineCtx{
 		GameId:                 "test",
 		IsLive:                 true,
 		World:                  gameWorld,
