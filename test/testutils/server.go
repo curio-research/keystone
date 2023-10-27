@@ -62,7 +62,6 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumbe
 		return nil, nil, nil, err
 	}
 	gameCtx.Stream = streamServer
-	//gameTick.Setup(gameCtx, gameTick.Schedule)
 
 	return s, gameCtx, db, nil
 }
