@@ -13,29 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// local sqlite db for testing
-var testSQLiteDBPath = "test.db"
-
-// setup local sqlite test db
-func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
-	db, err := sql.Open("sqlite3", testSQLiteDBPath)
-	if err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, db.Ping())
-
-	if deleteTables {
-		deleteAllTablesSQLite(t)
-	}
-
-	gormDB, err := gorm.Open(sqlite.Open(testSQLiteDBPath))
-
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(gormDB.Dialector, testGameID, accessors)
-	require.Nil(t, err)
-
-	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
-}
-
 func TestSQLiteSaveStateHandler(t *testing.T) {
 	mySQLStateHandler, _, db := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
@@ -76,6 +53,29 @@ func TestSQLiteMultipleGames_SaveTx(t *testing.T) {
 	saveStateHandler2, saveTxHandler2, db2 := setupSQLiteTestDB(t, testGameID2, false, testSchemaToAccessors)
 
 	coreTestMultipleGamesSaveTransactions(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
+}
+
+// local sqlite db for testing
+var testSQLiteDBPath = "test.db"
+
+// setup local sqlite test db
+func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
+	db, err := sql.Open("sqlite3", testSQLiteDBPath)
+	if err != nil {
+		require.Nil(t, err)
+	}
+	require.Nil(t, db.Ping())
+
+	if deleteTables {
+		deleteAllTablesSQLite(t)
+	}
+
+	gormDB, err := gorm.Open(sqlite.Open(testSQLiteDBPath))
+
+	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(gormDB.Dialector, testGameID, accessors)
+	require.Nil(t, err)
+
+	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
 }
 
 // delete all tables in a sqlite db

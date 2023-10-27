@@ -16,16 +16,6 @@ import (
 
 var sqlDSN string
 
-// func init() {
-// 	if err := godotenv.Load("../.env"); err != nil {
-// 		fmt.Println("Failed to load .env file")
-// 		return
-// 	}
-// 	sqlDSN = os.Getenv("SQL_DSN")
-
-// 	txdb.Register("txdb", "mysql", sqlDSN)
-// }
-
 func TestMySQLSaveStateHandler(t *testing.T) {
 	handler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
