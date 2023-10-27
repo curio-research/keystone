@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/curio-research/keystone/db"
 	gamedb "github.com/curio-research/keystone/db"
 	"github.com/curio-research/keystone/state"
 	_ "github.com/mattn/go-sqlite3"
@@ -18,7 +17,7 @@ import (
 var testSQLiteDBPath = "test.db"
 
 // setup local sqlite test db
-func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
+func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
 	db, err := sql.Open("sqlite3", testSQLiteDBPath)
 	if err != nil {
 		require.Nil(t, err)
