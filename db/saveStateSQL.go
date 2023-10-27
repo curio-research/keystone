@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 	"github.com/golang-collections/collections/stack"
 	"gorm.io/gorm"
 )
@@ -15,11 +15,11 @@ import (
 type MySQLSaveStateHandler struct {
 	dbConnection       *gorm.DB
 	gameID             string
-	schemasToAccessors map[interface{}]*core.TableBaseAccessor[any]
+	schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]
 }
 
 // initialize connection mySQL
-func newSQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*core.TableBaseAccessor[any]) (*MySQLSaveStateHandler, error) {
+func newSQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (m *MySQLSaveStateHandler) initializeDBTables() error {
 }
 
 // save state updates to mySQL database
-func (m *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate) error {
+func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) error {
 	// process table updates
 	tableUpdateOperationsByTable, tableRemovalOperationsByTable := processUpdatesForUpload(tableUpdates)
 
@@ -94,7 +94,7 @@ func (m *MySQLSaveStateHandler) SaveState(tableUpdates []core.TableUpdate) error
 
 // given a schema type, use the mapping from tables to cast to an array of that type
 func (m *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
-	var accessor *core.TableBaseAccessor[any]
+	var accessor *state.TableBaseAccessor[any]
 	for _, schemaAccessor := range m.schemasToAccessors {
 		if strings.Contains(schemaAccessor.Name(), schemaType) {
 			accessor = schemaAccessor
@@ -191,11 +191,11 @@ func convertSQLRowToSchema(rows *sql.Rows, schema interface{}) (interface{}, int
 	return schemaStruct.Interface(), int(id), nil
 }
 
-func processUpdatesForUpload(tableUpdates []core.TableUpdate) (TableToUpdatesMap, TableToUpdatesMap) {
+func processUpdatesForUpload(tableUpdates []state.TableUpdate) (TableToUpdatesMap, TableToUpdatesMap) {
 	// parse the array backwards and store the table updates that are the "latest"
 	// ex: if i updated a table row but then deleted it, only the deletion matters
 	seenUpdateEntities := make(map[int]bool)
-	updates := []core.TableUpdate{}
+	updates := []state.TableUpdate{}
 
 	for i := len(tableUpdates) - 1; i >= 0; i-- {
 		update := tableUpdates[i]
@@ -213,16 +213,16 @@ func processUpdatesForUpload(tableUpdates []core.TableUpdate) (TableToUpdatesMap
 
 type TableToUpdatesMap map[string][]any
 
-func categorizeTableUpdatesBySchema(updates []core.TableUpdate) (TableToUpdatesMap, TableToUpdatesMap) {
+func categorizeTableUpdatesBySchema(updates []state.TableUpdate) (TableToUpdatesMap, TableToUpdatesMap) {
 	tableUpdateOperationsByTable := make(TableToUpdatesMap)
 	tableRemovalOperationsByTable := make(TableToUpdatesMap)
 
 	for _, update := range updates {
 		table := update.Table
 
-		if update.OP == core.UpdateOP {
+		if update.OP == state.UpdateOP {
 			tableUpdateOperationsByTable[table] = append(tableUpdateOperationsByTable[table], update.Value)
-		} else if update.OP == core.RemovalOP {
+		} else if update.OP == state.RemovalOP {
 			tableRemovalOperationsByTable[table] = append(tableRemovalOperationsByTable[table], update.Value)
 		}
 	}

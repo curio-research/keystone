@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curio-research/keystone/core"
 	server "github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/curio-research/keystone/test/testutils"
 	"github.com/gorilla/websocket"
@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var BookTable = core.NewTableAccessor[Book]()
+var BookTable = state.NewTableAccessor[Book]()
 
 var p *testutils.PortManager
 
@@ -27,7 +27,7 @@ func init() {
 }
 
 func TestAddBook(t *testing.T) {
-	e, ws, s, _, _ := startTestServer(t, core.Dev)
+	e, ws, s, _, _ := startTestServer(t, state.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -88,7 +88,7 @@ func tearDown(ws *websocket.Conn, server *http.Server) {
 }
 
 func TestUpdate(t *testing.T) {
-	e, ws, s, mockErrorHandler, _ := startTestServer(t, core.Dev)
+	e, ws, s, mockErrorHandler, _ := startTestServer(t, state.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -203,7 +203,7 @@ func TestDeleteAndFilter(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			e, ws, s, errorHandler, _ := startTestServer(t, core.Dev)
+			e, ws, s, errorHandler, _ := startTestServer(t, state.Dev)
 			defer tearDown(ws, s)
 
 			w := e.World
@@ -247,7 +247,7 @@ func TestDeleteAndFilter(t *testing.T) {
 	}
 }
 
-func addBook(w core.IWorld, title, author string, ownerID int, entity int) int {
+func addBook(w state.IWorld, title, author string, ownerID int, entity int) int {
 	return BookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
@@ -255,7 +255,7 @@ func addBook(w core.IWorld, title, author string, ownerID int, entity int) int {
 	})
 }
 
-func addBookSpecific(w core.IWorld, title, author string, ownerID, entity int) int {
+func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) int {
 	return BookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
@@ -277,7 +277,7 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	return nil
 }
 
-func startTestServer(t *testing.T, mode core.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
+func startTestServer(t *testing.T, mode state.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
 	s, e, db, err := testutils.Server(t, mode, wsPort, 1, testSchemaToAccessors)

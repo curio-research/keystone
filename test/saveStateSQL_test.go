@@ -4,8 +4,8 @@ import (
 	"github.com/curio-research/keystone/test/testutils"
 	"testing"
 
-	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -167,7 +167,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 
 	type MovePersonRequest struct {
 		TargetEntity int
-		NewPosition  core.Pos
+		NewPosition  state.Pos
 	}
 
 	updatePersonSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePersonRequest]) {
@@ -179,7 +179,7 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 		personTable.Set(ctx.W, req.TargetEntity, person)
 	})
 
-	newGameEngine := func(t *testing.T) (*server.EngineCtx, *core.GameWorld) {
+	newGameEngine := func(t *testing.T) (*server.EngineCtx, *state.GameWorld) {
 		gameEngine := initializeTestWorld(initializePersonSystem, updatePersonSystem)
 		return gameEngine, gameEngine.World
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 )
 
 // ---------------------------------------
@@ -22,7 +22,7 @@ type EngineCtx struct {
 	IsRestoringState bool
 
 	// Game world containing table game state
-	World *core.GameWorld
+	World *state.GameWorld
 
 	// Game tick. The heartbeat of your game
 	GameTick *GameTick
@@ -46,7 +46,7 @@ type EngineCtx struct {
 	SystemBroadcastHandler ISystemBroadcastHandler
 
 	// "dev", "prod"
-	Mode core.GameMode
+	Mode state.GameMode
 
 	// whether game should record error in error log
 	ShouldRecordError bool
@@ -57,9 +57,9 @@ type EngineCtx struct {
 	StateUpdatesMutex sync.Mutex
 
 	// state updates
-	PendingStateUpdatesToSave []core.TableUpdate
+	PendingStateUpdatesToSave []state.TableUpdate
 
-	RegisterTablesToWorldCb func(w *core.GameWorld)
+	RegisterTablesToWorldCb func(w *state.GameWorld)
 
 	RandSeed int
 }
@@ -116,7 +116,7 @@ func (ctx *EngineCtx) AddStateUpdatesToSave() {
 }
 
 func (ctx *EngineCtx) ClearStateUpdatesToSave() {
-	ctx.PendingStateUpdatesToSave = []core.TableUpdate{}
+	ctx.PendingStateUpdatesToSave = []state.TableUpdate{}
 }
 
 // set whether game is live or not

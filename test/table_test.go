@@ -3,35 +3,35 @@ package test
 import (
 	"testing"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTable(t *testing.T) {
-	w := core.NewWorld()
+	w := state.NewWorld()
 	testRegisterTables(w)
 
 	alice1 := Person{
 		Name:     "Alice",
 		Age:      0,
 		Address:  "123 Main St",
-		Position: core.Pos{X: 1, Y: 2},
+		Position: state.Pos{X: 1, Y: 2},
 		BookId:   0,
 	}
 	alice2 := Person{
 		Name:     "Alice",
 		Age:      1,
 		Address:  "123 Main St",
-		Position: core.Pos{X: 1, Y: 2},
+		Position: state.Pos{X: 1, Y: 2},
 		BookId:   0,
 	}
 	bobby := Person{
 		Name:     "Bobby",
 		Age:      0,
 		Address:  "Metaverse St",
-		Position: core.Pos{X: 1, Y: 2},
+		Position: state.Pos{X: 1, Y: 2},
 		BookId:   0,
 	}
 
@@ -103,10 +103,10 @@ func TestFilter(t *testing.T) {
 		IsExternal bool
 	}
 
-	w := core.NewWorld()
+	w := state.NewWorld()
 
 	// create new tables
-	TransactionTable := core.NewTableAccessor[TransactionSchema]()
+	TransactionTable := state.NewTableAccessor[TransactionSchema]()
 
 	w.AddTables(TransactionTable)
 
@@ -130,7 +130,7 @@ func TestFilter(t *testing.T) {
 }
 
 func TestProcessTxs(t *testing.T) {
-	w := core.NewWorld()
+	w := state.NewWorld()
 
 	type TransactionSchema struct {
 		Type       string
@@ -141,7 +141,7 @@ func TestProcessTxs(t *testing.T) {
 	}
 
 	var (
-		TransactionTable = core.NewTableAccessor[TransactionSchema]()
+		TransactionTable = state.NewTableAccessor[TransactionSchema]()
 	)
 
 	w.AddTables(TransactionTable)

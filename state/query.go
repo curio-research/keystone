@@ -1,4 +1,4 @@
-package core
+package state
 
 type QueryContext struct {
 	mappingCache map[int]bool

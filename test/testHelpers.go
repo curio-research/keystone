@@ -3,8 +3,8 @@ package test
 import (
 	"sync"
 
-	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 )
 
 var (
@@ -13,13 +13,13 @@ var (
 	testName2 = "Bob"
 	testName3 = "Francisco"
 
-	testPos1 = core.Pos{1, 2}
-	testPos2 = core.Pos{5, 6}
-	testPos3 = core.Pos{1, 3}
-	testPos4 = core.Pos{2, 1}
-	testPos5 = core.Pos{2, 2}
-	testPos6 = core.Pos{2, 3}
-	testPos7 = core.Pos{3, 1}
+	testPos1 = state.Pos{1, 2}
+	testPos2 = state.Pos{5, 6}
+	testPos3 = state.Pos{1, 3}
+	testPos4 = state.Pos{2, 1}
+	testPos5 = state.Pos{2, 2}
+	testPos6 = state.Pos{2, 3}
+	testPos7 = state.Pos{3, 1}
 
 	testEntity1 = 69
 	testEntity2 = 70
@@ -55,9 +55,9 @@ type Person struct {
 	MainWallet string
 	Age        int
 	Address    string
-	Position   core.Pos `gorm:"embedded"`
-	BookId     int      // TODO: if we can automatically solve the linkage that'd be OP
-	Id         int      `gorm:"primaryKey"`
+	Position   state.Pos `gorm:"embedded"`
+	BookId     int       // TODO: if we can automatically solve the linkage that'd be OP
+	Id         int       `gorm:"primaryKey"`
 }
 
 type Book struct {
@@ -77,7 +77,7 @@ type NestedStruct struct {
 	Name  string
 	Age   int
 	Happy bool
-	Pos   core.Pos `gorm:"embedded"`
+	Pos   state.Pos `gorm:"embedded"`
 }
 
 type EmbeddedStructSchema struct {
@@ -85,20 +85,20 @@ type EmbeddedStructSchema struct {
 	Id  int          `gorm:"primaryKey"`
 }
 
-var personTable = core.NewTableAccessor[Person]()
-var bookTable = core.NewTableAccessor[Book]()
-var tokenTable = core.NewTableAccessor[Token]()
-var embeddedStructTable = core.NewTableAccessor[EmbeddedStructSchema]()
+var personTable = state.NewTableAccessor[Person]()
+var bookTable = state.NewTableAccessor[Book]()
+var tokenTable = state.NewTableAccessor[Token]()
+var embeddedStructTable = state.NewTableAccessor[EmbeddedStructSchema]()
 
-var testSchemaToAccessors = map[interface{}]*core.TableBaseAccessor[any]{
-	&Person{}:                   (*core.TableBaseAccessor[any])(personTable),
-	&Book{}:                     (*core.TableBaseAccessor[any])(bookTable),
-	&Token{}:                    (*core.TableBaseAccessor[any])(tokenTable),
-	&server.TransactionSchema{}: (*core.TableBaseAccessor[any])(server.TransactionTable),
-	&EmbeddedStructSchema{}:     (*core.TableBaseAccessor[any])(embeddedStructTable),
+var testSchemaToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
+	&Person{}:                   (*state.TableBaseAccessor[any])(personTable),
+	&Book{}:                     (*state.TableBaseAccessor[any])(bookTable),
+	&Token{}:                    (*state.TableBaseAccessor[any])(tokenTable),
+	&server.TransactionSchema{}: (*state.TableBaseAccessor[any])(server.TransactionTable),
+	&EmbeddedStructSchema{}:     (*state.TableBaseAccessor[any])(embeddedStructTable),
 }
 
-func testRegisterTables(w *core.GameWorld) {
+func testRegisterTables(w *state.GameWorld) {
 	for _, accessor := range testSchemaToAccessors {
 		w.AddTable(accessor)
 	}
@@ -110,11 +110,11 @@ type testPersonRequests struct {
 }
 
 type testPersonRequest struct {
-	OP        core.TableOperationType `json:"OP"`
-	Entity    int                     `json:"Entity"`
-	Val       Person                  `json:"Val"`
-	Id        int                     `json:"Id"`
-	SendError bool                    `json:"SendError"`
+	OP        state.TableOperationType `json:"OP"`
+	Entity    int                      `json:"Entity"`
+	Val       Person                   `json:"Val"`
+	Id        int                      `json:"Id"`
+	SendError bool                     `json:"SendError"`
 }
 
 type testIdentityPayload struct {
@@ -136,10 +136,10 @@ func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx
 		tickSchedule.AddTickSystem(0, system)
 	}
 
-	gameTick := server.NewGameTick(core.TickRate)
+	gameTick := server.NewGameTick(state.TickRate)
 	gameTick.Schedule = tickSchedule
 
-	gameWorld := core.NewWorld()
+	gameWorld := state.NewWorld()
 	testRegisterTables(gameWorld)
 
 	gameCtx := &server.EngineCtx{

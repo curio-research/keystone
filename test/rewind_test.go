@@ -3,8 +3,8 @@ package test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/curio-research/keystone/test/testutils"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ import (
 // TODO have a combined key of data + tickNumber
 // TODO have an initialization to remind people they need to do this beforehand?
 func TestRewind(t *testing.T) {
-	ctx, _, s, _, db := startTestServer(t, core.DevSQL)
+	ctx, _, s, _, db := startTestServer(t, state.DevSQL)
 	defer db.Close()
 
 	player1Entity := testEntity1

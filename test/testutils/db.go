@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/DATA-DOG/go-txdb"
-	"github.com/curio-research/keystone/core"
 	gamedb "github.com/curio-research/keystone/db"
+	"github.com/curio-research/keystone/state"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
@@ -24,7 +24,7 @@ func init() {
 	txdb.Register("txdb", "mysql", testSQLDSN)
 }
 
-func SetupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*core.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
+func SetupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
 	var db *sql.DB
 	db, err := sql.Open("txdb", testSQLDSN)
 	if err != nil {

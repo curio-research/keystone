@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/curio-research/keystone/core"
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -15,12 +15,12 @@ import (
 )
 
 // TODO refactor http to also be started inside here
-func Server(t *testing.T, mode core.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*core.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
+func Server(t *testing.T, mode state.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
 
-	gameWorld := core.NewWorld()
+	gameWorld := state.NewWorld()
 
 	gameTick := server.NewGameTick(20)
 	gameTick.Schedule = server.NewTickSchedule()
@@ -42,16 +42,16 @@ func Server(t *testing.T, mode core.GameMode, websocketPort int, randSeedNumber 
 	}
 
 	var db *sql.DB
-	if mode == core.Prod || mode == core.DevSQL {
+	if mode == state.Prod || mode == state.DevSQL {
 		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, gameCtx.GameId, true, schemaToTableAccessors)
 		gameCtx.SaveStateHandler = saveStateHandler
 		gameCtx.SaveTransactionsHandler = saveTxHandler
 		db = testDB
 
 		server.RegisterHTTPSQLRoutes(gameCtx, s)
-		saveInterval := core.SaveStateInterval
-		if mode == core.DevSQL {
-			saveInterval = core.DevSQLSaveStateInterval
+		saveInterval := state.SaveStateInterval
+		if mode == state.DevSQL {
+			saveInterval = state.DevSQLSaveStateInterval
 		}
 		server.SetupSaveStateLoop(gameCtx, saveInterval)
 	}

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -64,7 +64,7 @@ type TransactionCtx[T any] struct {
 	TxId int
 
 	// access world variables through this
-	W core.IWorld
+	W state.IWorld
 
 	// transaction request parameters
 	Req T
@@ -137,7 +137,7 @@ func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middleware
 			eventCtx := &EventCtx{}
 
 			req := DecodeTxData[T](ctx, transactionId)
-			worldUpdateBuffer := core.NewWorldUpdateBuffer(ctx.World)
+			worldUpdateBuffer := state.NewWorldUpdateBuffer(ctx.World)
 
 			// create a transaction context for writing logic easier
 			transactionCtx := &TransactionCtx[T]{
@@ -183,7 +183,7 @@ func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 
 		eventCtx := &EventCtx{}
 
-		worldUpdateBuffer := core.NewWorldUpdateBuffer(ctx.World)
+		worldUpdateBuffer := state.NewWorldUpdateBuffer(ctx.World)
 
 		// create a transaction context for writing logic easier
 		transactionCtx := &TransactionCtx[any]{
@@ -277,7 +277,7 @@ func SerializeRequestToString[T any](req T) (string, error) {
 }
 
 // get tick transactions
-func GetTickTransactionsOfType(w *core.GameWorld, transactionType string, tickNumber int) []int {
+func GetTickTransactionsOfType(w *state.GameWorld, transactionType string, tickNumber int) []int {
 
 	query := TransactionSchema{TickNumber: tickNumber, Type: transactionType}
 	queryFields := []string{"TickNumber", "Type"}
@@ -291,7 +291,7 @@ func GetSystemTransactionsOfType[T any](ctx *EngineCtx) []int {
 	return GetTickTransactionsOfType(ctx.World, reflect.TypeOf(t).String(), ctx.GameTick.TickNumber)
 }
 
-func GetTransactionsAtTickNumber(w *core.GameWorld, tickNumber int) []int {
+func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
 	query := TransactionSchema{TickNumber: tickNumber}
 	queryFields := []string{"TickNumber"}
 
@@ -299,7 +299,7 @@ func GetTransactionsAtTickNumber(w *core.GameWorld, tickNumber int) []int {
 }
 
 // queue transactions that are internal (ex: move planning)
-func QueueTxFromInternal[T any](w core.IWorld, tickNumber int, data T, tickId string) error {
+func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data T, tickId string) error {
 	return QueueTxAtTime(w, tickNumber, data, tickId, false)
 }
 
@@ -310,7 +310,7 @@ func QueueTxFromExternal[T any](ctx *EngineCtx, data T, tickId string) error {
 }
 
 // queues tick transactions to be executed in the future
-func QueueTxAtTime(w core.IWorld, tickNumber int, data interface{}, uuid string, isExternal bool) error {
+func QueueTxAtTime(w state.IWorld, tickNumber int, data interface{}, uuid string, isExternal bool) error {
 	serializedStringData, err := SerializeRequestToString(data)
 	if err != nil {
 		return err
@@ -336,7 +336,7 @@ func QueueTransaction(ctx *EngineCtx, data interface{}, isExternal bool) error {
 	return QueueTxAtTime(ctx.World, nextTickId, data, "", isExternal)
 }
 
-func DeleteAllTicksAtTickNumber(w *core.GameWorld, tickNumber int) {
+func DeleteAllTicksAtTickNumber(w *state.GameWorld, tickNumber int) {
 	transactionIds := GetTransactionsAtTickNumber(w, tickNumber)
 
 	for _, transactionId := range transactionIds {

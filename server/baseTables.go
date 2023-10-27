@@ -3,7 +3,7 @@ package server
 import (
 	"strconv"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 )
 
 type TransactionSchema struct {
@@ -27,10 +27,10 @@ type TransactionSchema struct {
 }
 
 var (
-	TransactionTable = core.NewTableAccessor[TransactionSchema]()
+	TransactionTable = state.NewTableAccessor[TransactionSchema]()
 )
 
-func AddSystemTransaction(w *core.GameWorld, tickNumber int, transactionType string, data string, uuid string, isExternal bool) int {
+func AddSystemTransaction(w *state.GameWorld, tickNumber int, transactionType string, data string, uuid string, isExternal bool) int {
 	entity := TransactionTable.Add(w, TransactionSchema{
 		Type:       transactionType,
 		Uuid:       uuid,
@@ -43,11 +43,11 @@ func AddSystemTransaction(w *core.GameWorld, tickNumber int, transactionType str
 }
 
 // registers default tables keystone must operates on such as tick related
-func RegisterDefaultTables(w *core.GameWorld) {
+func RegisterDefaultTables(w *state.GameWorld) {
 	w.AddTables(TransactionTable)
 }
 
-func GetTransactionUuid(w core.IWorld, transactionId int) int {
+func GetTransactionUuid(w state.IWorld, transactionId int) int {
 	transaction := TransactionTable.Get(w, transactionId)
 	i, _ := strconv.ParseInt(transaction.Uuid, 10, 32)
 

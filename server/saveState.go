@@ -3,12 +3,12 @@ package server
 import (
 	"time"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 )
 
 // general interface to implement
 type ISaveState interface {
-	SaveState(tableUpdates []core.TableUpdate) error
+	SaveState(tableUpdates []state.TableUpdate) error
 
 	RestoreState(ctx *EngineCtx, gameId string) error
 }
@@ -32,7 +32,7 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval int) {
 		for range ticker.C {
 			if ctx.IsLive {
 				// deep copy pending state updates and clear then
-				updatesToPublish := core.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
+				updatesToPublish := state.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
 				ctx.ClearStateUpdatesToSave()
 				ctx.SaveStateHandler.SaveState(updatesToPublish)
 

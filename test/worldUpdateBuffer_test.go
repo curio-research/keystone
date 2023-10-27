@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/curio-research/keystone/core"
+	"github.com/curio-research/keystone/state"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,9 +15,9 @@ import (
 //	5. Assert that once the buffer updates are applied, the current world has the same updates as the buffer
 
 func TestWorldUpdateBuffer_Add(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	p1 := Person{
 		Name:     testName1,
@@ -35,7 +35,7 @@ func TestWorldUpdateBuffer_Add(t *testing.T) {
 	}
 	person2Entity := personTable.Add(bufferWorld, p2)
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		assert.Equal(t, p1, personTable.Get(w, person1Entity))
 		assert.Equal(t, p2, personTable.Get(w, person2Entity))
 	}
@@ -50,9 +50,9 @@ func TestWorldUpdateBuffer_Add(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_AddSpecific(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	p1Entity := 100
 	b1Entity := 101
@@ -87,7 +87,7 @@ func TestWorldUpdateBuffer_AddSpecific(t *testing.T) {
 	}
 	personTable.AddSpecific(bufferWorld, p2Entity, p2)
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		assert.Equal(t, p1, personTable.Get(w, p1Entity))
 		assert.Equal(t, b1, bookTable.Get(w, b1Entity))
 		assert.Equal(t, b2, bookTable.Get(w, b2Entity))
@@ -106,9 +106,9 @@ func TestWorldUpdateBuffer_AddSpecific(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_Set(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	personEntity := 100
 	bookEntity := 101
@@ -137,7 +137,7 @@ func TestWorldUpdateBuffer_Set(t *testing.T) {
 	updatedBook.Id = bookEntity
 	bookTable.Set(bufferWorld, bookEntity, updatedBook)
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		assert.Equal(t, updatedPerson, personTable.Get(w, personEntity))
 		assert.Equal(t, updatedBook, bookTable.Get(w, bookEntity))
 	}
@@ -152,9 +152,9 @@ func TestWorldUpdateBuffer_Set(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_Remove(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	book1Entity := 100
 	book2Entity := 101
@@ -188,7 +188,7 @@ func TestWorldUpdateBuffer_Remove(t *testing.T) {
 	bookTable.RemoveEntity(bufferWorld, book2Entity)
 	bookTable.RemoveEntity(bufferWorld, book3Entity)
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		assert.Equal(t, book1, bookTable.Get(w, book1Entity))
 		assertEmpty(t, bookTable.Get(w, book2Entity))
 		assertEmpty(t, bookTable.Get(w, book3Entity))
@@ -207,9 +207,9 @@ func TestWorldUpdateBuffer_Remove(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_Filter(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	person1Entity := personTable.Add(currWorld, Person{
 		Name:    testName1,
@@ -244,7 +244,7 @@ func TestWorldUpdateBuffer_Filter(t *testing.T) {
 	// to test entity is marked for deletion
 	personTable.RemoveEntity(bufferWorld, person4Entity)
 
-	assertChanges := func(t *testing.T, w core.IWorld) {
+	assertChanges := func(t *testing.T, w state.IWorld) {
 		filter1 := personTable.Filter(w, Person{Age: testAge1}, []string{"Age"})
 		assert.Len(t, filter1, 3)
 		assert.Contains(t, filter1, person1Entity)
@@ -286,9 +286,9 @@ func TestWorldUpdateBuffer_Filter(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_Entities_Add(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	personTable.Add(currWorld, Person{})
 	personTable.Add(currWorld, Person{})
@@ -300,7 +300,7 @@ func TestWorldUpdateBuffer_Entities_Add(t *testing.T) {
 	personTable.AddSpecific(currWorld, 69, Person{})
 	personTable.AddSpecific(currWorld, 78, Person{})
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		entities := personTable.Entities(w)
 		assert.Len(t, entities, 8)
 		for _, i := range []int{1, 2, 3, 4, 45, 56, 69, 78} {
@@ -321,9 +321,9 @@ func TestWorldUpdateBuffer_Entities_Add(t *testing.T) {
 }
 
 func TestWorldUpdateBuffer_Entities_Remove(t *testing.T) {
-	currWorld := core.NewWorld()
+	currWorld := state.NewWorld()
 	testRegisterTables(currWorld)
-	bufferWorld := core.NewWorldUpdateBuffer(currWorld)
+	bufferWorld := state.NewWorldUpdateBuffer(currWorld)
 
 	personTable.Add(currWorld, Person{})
 	personTable.Add(currWorld, Person{})
@@ -340,7 +340,7 @@ func TestWorldUpdateBuffer_Entities_Remove(t *testing.T) {
 	personTable.RemoveEntity(bufferWorld, 45)
 	personTable.RemoveEntity(bufferWorld, 78)
 
-	assertUpdates := func(t *testing.T, w core.IWorld) {
+	assertUpdates := func(t *testing.T, w state.IWorld) {
 		entities := personTable.Entities(w)
 		assert.Len(t, entities, 4)
 		for _, i := range []int{2, 56, 69} {

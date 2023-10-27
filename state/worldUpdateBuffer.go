@@ -1,4 +1,4 @@
-package core
+package state
 
 type WorldUpdateBuffer struct {
 	bufferWorld  IWorld
