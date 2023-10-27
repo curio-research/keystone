@@ -60,7 +60,6 @@ func (m *MySQLSaveStateHandler) initializeDBTables() error {
 		return err
 	}
 
-	fmt.Println("-> All tables have been created")
 	return nil
 }
 

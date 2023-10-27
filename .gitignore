@@ -5,3 +5,5 @@
 .env
 
 .idea
+
+test/test.db

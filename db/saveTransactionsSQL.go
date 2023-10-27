@@ -2,17 +2,17 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/curio-research/keystone/server"
 	"gorm.io/gorm"
 )
 
 type MySQLSaveTransactionHandler struct {
 	transactionTable *SQLTransactionTable
-	randSeed         int
 	gameId           string
 }
 
-func newSQLSaveTransactionHandler(dialector gorm.Dialector, randSeed int, gameID string) (*MySQLSaveTransactionHandler, error) {
+func newSQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLSaveTransactionHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err
@@ -25,7 +25,6 @@ func newSQLSaveTransactionHandler(dialector gorm.Dialector, randSeed int, gameID
 
 	handler := &MySQLSaveTransactionHandler{
 		transactionTable: txTable,
-		randSeed:         randSeed,
 		gameId:           gameID,
 	}
 	return handler, nil

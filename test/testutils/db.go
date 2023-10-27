@@ -3,14 +3,15 @@ package testutils
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/DATA-DOG/go-txdb"
 	gamedb "github.com/curio-research/keystone/db"
 	"github.com/curio-research/keystone/state"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
-	"os"
-	"testing"
 )
 
 var testSQLDSN string
@@ -37,7 +38,7 @@ func SetupTestDB(t *testing.T, testGameID string, deleteTables bool, accessors m
 	}
 
 	sqlDialector := mysql.New(mysql.Config{Conn: db})
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, 0, accessors)
+	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, accessors)
 	require.Nil(t, err)
 
 	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
@@ -62,6 +63,4 @@ func DeleteAllTables(t *testing.T, db *sql.DB) {
 			fmt.Println("Failed to drop table", table, "err", err)
 		}
 	}
-
-	fmt.Println("-> Existing tables have been removed")
 }
