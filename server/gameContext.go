@@ -46,7 +46,7 @@ type EngineCtx struct {
 	SystemBroadcastHandler ISystemBroadcastHandler
 
 	// "dev", "prod"
-	Mode state.GameMode
+	Mode GameMode
 
 	// whether game should record error in error log
 	ShouldRecordError bool

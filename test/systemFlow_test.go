@@ -27,7 +27,7 @@ func init() {
 }
 
 func TestAddBook(t *testing.T) {
-	e, ws, s, _, _ := startTestServer(t, state.Dev)
+	e, ws, s, _, _ := startTestServer(t, server.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -88,7 +88,7 @@ func tearDown(ws *websocket.Conn, server *http.Server) {
 }
 
 func TestUpdate(t *testing.T) {
-	e, ws, s, mockErrorHandler, _ := startTestServer(t, state.Dev)
+	e, ws, s, mockErrorHandler, _ := startTestServer(t, server.Dev)
 	defer tearDown(ws, s)
 
 	w := e.World
@@ -203,7 +203,7 @@ func TestDeleteAndFilter(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			e, ws, s, errorHandler, _ := startTestServer(t, state.Dev)
+			e, ws, s, errorHandler, _ := startTestServer(t, server.Dev)
 			defer tearDown(ws, s)
 
 			w := e.World
@@ -277,7 +277,7 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	return nil
 }
 
-func startTestServer(t *testing.T, mode state.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
+func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
 	s, e, db, err := testutils.Server(t, mode, wsPort, 1, testSchemaToAccessors)

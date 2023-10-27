@@ -136,7 +136,7 @@ func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx
 		tickSchedule.AddTickSystem(0, system)
 	}
 
-	gameTick := server.NewGameTick(state.TickRate)
+	gameTick := server.NewGameTick(server.TickRate)
 	gameTick.Schedule = tickSchedule
 
 	gameWorld := state.NewWorld()

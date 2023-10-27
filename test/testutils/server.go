@@ -15,7 +15,7 @@ import (
 )
 
 // TODO refactor http to also be started inside here
-func Server(t *testing.T, mode state.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
+func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -42,16 +42,16 @@ func Server(t *testing.T, mode state.GameMode, websocketPort int, randSeedNumber
 	}
 
 	var db *sql.DB
-	if mode == state.Prod || mode == state.DevSQL {
+	if mode == server.Prod || mode == server.DevSQL {
 		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, gameCtx.GameId, true, schemaToTableAccessors)
 		gameCtx.SaveStateHandler = saveStateHandler
 		gameCtx.SaveTransactionsHandler = saveTxHandler
 		db = testDB
 
 		server.RegisterHTTPSQLRoutes(gameCtx, s)
-		saveInterval := state.SaveStateInterval
-		if mode == state.DevSQL {
-			saveInterval = state.DevSQLSaveStateInterval
+		saveInterval := server.SaveStateInterval
+		if mode == server.DevSQL {
+			saveInterval = server.DevSQLSaveStateInterval
 		}
 		server.SetupSaveStateLoop(gameCtx, saveInterval)
 	}

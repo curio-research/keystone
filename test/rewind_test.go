@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/curio-research/keystone/test/testutils"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestRewind(t *testing.T) {
-	ctx, _, s, _, db := startTestServer(t, state.DevSQL)
+	ctx, _, s, _, db := startTestServer(t, server.DevSQL)
 	defer db.Close()
 
 	player1Entity := testEntity1
