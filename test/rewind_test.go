@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-// TODO have a combined key of data + tickNumber
-// TODO have an initialization to remind people they need to do this beforehand?
 func TestRewind(t *testing.T) {
 	ctx, _, s, _, db := startTestServer(t, state.DevSQL)
 	defer db.Close()
