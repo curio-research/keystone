@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func NewGameEngine(tickRate, randSeed int) *server.EngineCtx {
+func NewGameEngine(tickRate, randSeed int, tables ...state.ITable) *server.EngineCtx {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -21,6 +21,7 @@ func NewGameEngine(tickRate, randSeed int) *server.EngineCtx {
 	gameTick.Schedule = server.NewTickSchedule()
 
 	server.RegisterDefaultTables(gameWorld)
+	gameWorld.AddTables(tables...)
 
 	// this is the master game context being passed around, containing pointers to everything
 	gameCtx := &server.EngineCtx{
@@ -33,10 +34,6 @@ func NewGameEngine(tickRate, randSeed int) *server.EngineCtx {
 	}
 
 	return gameCtx
-}
-
-func RegisterTables(gameCtx *server.EngineCtx, tables ...state.ITable) {
-	gameCtx.World.AddTables(tables...)
 }
 
 func RegisterSQLHandlers(gameCtx *server.EngineCtx, g *gin.Engine, saveInterval time.Duration, saveStateHandler server.ISaveState, saveTxHandler server.ISaveTransactions) {
