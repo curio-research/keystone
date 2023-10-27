@@ -390,7 +390,7 @@ func setupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, access
 	}
 
 	sqlDialector := mysql.New(mysql.Config{Conn: db})
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, 0, accessors)
+	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, accessors)
 	require.Nil(t, err)
 
 	return mySQLSaveStateHandler, mySQLSaveTxHandler, db

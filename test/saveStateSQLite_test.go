@@ -29,9 +29,9 @@ func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, acces
 		deleteAllTablesSQLite(t)
 	}
 
-	gormDB, err := gorm.Open(sqlite.Open(testSQLiteDBPath), &gorm.Config{})
+	gormDB, err := gorm.Open(sqlite.Open(testSQLiteDBPath))
 
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(gormDB.Dialector, testGameID, 0, accessors)
+	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(gormDB.Dialector, testGameID, accessors)
 	require.Nil(t, err)
 
 	return mySQLSaveStateHandler, mySQLSaveTxHandler, db

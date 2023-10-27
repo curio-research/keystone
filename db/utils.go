@@ -4,13 +4,15 @@ import (
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
 
-func InitializeSQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+// initialize and set mySQL handlers to server context
+func InitializeMySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
 	dialector := mysql.Open(mySQLDSN)
-	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, ctx.RandSeed, accessors)
+	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
 	if err != nil {
 		return err
 	}
@@ -20,7 +22,21 @@ func InitializeSQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map
 	return nil
 }
 
-func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, randSeed int, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+// use file path to open DB
+func InitializeSQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+	dialector := sqlite.Open(sqliteDBFilePath)
+	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
+	if err != nil {
+		return err
+	}
+
+	ctx.SaveStateHandler = saveStateHandler
+	ctx.SaveTransactionsHandler = saveTransactionsHandler
+	return nil
+
+}
+
+func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	saveStateHandler, err := newSQLSaveStateHandler(dialector, gameId, accessors)
 	if err != nil {
 		return nil, nil, err
