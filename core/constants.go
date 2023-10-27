@@ -9,4 +9,6 @@ const (
 
 	SaveStateInterval       = 10
 	DevSQLSaveStateInterval = 1
+
+	TickRate = 100
 )

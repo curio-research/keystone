@@ -58,6 +58,8 @@ func TestAddBook(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	server.TickWorldForward(e, 2)
+
 	b1 := BookTable.Get(w, specificBookEntity)
 	assert.Equal(t, testBookTitle1, b1.Title)
 	assert.Equal(t, testBookAuthor1, b1.Author)
@@ -114,6 +116,8 @@ func TestUpdate(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	server.TickWorldForward(e, 2)
+
 	require.Equal(t, mockErrorHandler.ErrorCount(), 1)
 	assert.Equal(t, "no book to update with entity 0", mockErrorHandler.LastError())
 
@@ -137,6 +141,8 @@ func TestUpdate(t *testing.T) {
 		Entity: int64(b2Entity),
 	})
 	require.Nil(t, err)
+
+	server.TickWorldForward(e, 2)
 
 	b1 = BookTable.Get(w, b1Entity)
 	assert.Equal(t, testBookTitle1, b1.Title)
@@ -215,6 +221,8 @@ func TestDeleteAndFilter(t *testing.T) {
 			})
 			require.Nil(t, err)
 
+			server.TickWorldForward(e, 3)
+
 			m := make(map[int]interface{})
 			for _, i := range testCase.remainingEntities {
 				m[i] = nil
@@ -265,7 +273,6 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	}
 
 	time.Sleep(time.Millisecond * 100)
-	// time.Sleep(time.Second)
 
 	return nil
 }

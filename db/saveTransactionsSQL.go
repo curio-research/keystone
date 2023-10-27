@@ -61,7 +61,7 @@ func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx,
 	for _, entry := range entries {
 		server.AddSystemTransaction(gw, entry.Tick, entry.Type, entry.Data, "", false)
 	}
-	server.TickWorldForward(ctx, tickNumber-1)
+	server.TickWorldForward(ctx, tickNumber)
 
 	return nil
 }
