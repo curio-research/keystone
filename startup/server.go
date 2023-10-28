@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func NewGameEngine(tickRate, randSeed int, tables ...state.ITable) *server.EngineCtx {
+func NewGameEngine(gameID string, tickRate, randSeed int, tables ...state.ITable) *server.EngineCtx {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -25,7 +25,7 @@ func NewGameEngine(tickRate, randSeed int, tables ...state.ITable) *server.Engin
 
 	// this is the master game context being passed around, containing pointers to everything
 	gameCtx := &server.EngineCtx{
-		GameId:                 "test",
+		GameId:                 gameID,
 		IsLive:                 true,
 		World:                  gameWorld,
 		GameTick:               gameTick,

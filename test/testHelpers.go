@@ -1,9 +1,8 @@
 package test
 
 import (
-	"sync"
-
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/startup"
 	"github.com/curio-research/keystone/state"
 )
 
@@ -131,31 +130,20 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 
 func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
 	// initiate an empty tick schedule
-	tickSchedule := server.NewTickSchedule()
+	var tables []state.ITable
+	for _, accessor := range testSchemaToAccessors {
+		tables = append(tables, accessor)
+	}
+
+	ctx := startup.NewGameEngine("test", server.TickRate, 0, tables...)
 	for _, system := range systems {
-		tickSchedule.AddTickSystem(0, system)
+		ctx.GameTick.Schedule.AddTickSystem(0, system)
 	}
 
-	gameTick := server.NewGameTick(server.TickRate)
-	gameTick.Schedule = tickSchedule
+	startup.RegisterErrorHandler(ctx, &testErrorHandler{})
+	startup.RegisterBroadcastHandler(ctx, &testBroadcastHandler{})
 
-	gameWorld := state.NewWorld()
-	testRegisterTables(gameWorld)
-
-	gameCtx := &server.EngineCtx{
-		GameId:                 "prototype-game",
-		IsLive:                 true,
-		World:                  gameWorld,
-		GameTick:               gameTick,
-		TransactionsToSaveLock: sync.Mutex{},
-		ShouldRecordError:      true,
-		ErrorLog:               []server.ErrorLog{},
-		Mode:                   "dev",
-		SystemErrorHandler:     &testErrorHandler{},
-		SystemBroadcastHandler: &testBroadcastHandler{},
-	}
-
-	return gameCtx
+	return ctx
 }
 
 type testErrorHandler struct {
