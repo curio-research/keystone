@@ -1,5 +1,7 @@
 package server
 
+import "time"
+
 type GameMode string
 
 const (
@@ -7,8 +9,8 @@ const (
 	DevSQL GameMode = "devSQL"
 	Prod   GameMode = "prod"
 
-	SaveStateInterval       = 10
-	DevSQLSaveStateInterval = 1
+	SaveStateInterval       = time.Second * 10
+	DevSQLSaveStateInterval = time.Second
 
 	TickRate = 100
 )

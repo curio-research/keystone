@@ -36,7 +36,22 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval time.Duration) {
 				updatesToPublish := state.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
 				ctx.ClearStateUpdatesToSave()
 				ctx.SaveStateHandler.SaveState(updatesToPublish)
+			}
+		}
+	}()
+}
 
+func SetupSaveTxLoop(ctx *EngineCtx, saveInterval time.Duration) {
+	tickerTime := time.Second
+	if saveInterval != 0 {
+		tickerTime = saveInterval
+	}
+
+	ticker := time.NewTicker(tickerTime)
+
+	go func() {
+		for range ticker.C {
+			if ctx.IsLive {
 				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
 				ctx.ClearTransactionsToSave()
 				ctx.SaveTransactionsHandler.SaveTransactions(transactionsToSave)

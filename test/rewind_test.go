@@ -73,7 +73,7 @@ func TestRewind(t *testing.T) {
 	}, "")
 	server.TickWorldForward(ctx, 35)
 
-	time.Sleep(time.Second * 5) // TODO have a sleep for 2 seconds before resetting the world?
+	time.Sleep(time.Second * 3)
 
 	resetWorldAndTick(ctx)
 	sendPostRequest(t, s, "rewindState", server.RewindStateRequest{

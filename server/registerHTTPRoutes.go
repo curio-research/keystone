@@ -4,6 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterHTTPSQLRoutes(ctx *EngineCtx, g *gin.Engine) {
+func RegisterSQLRoutes(ctx *EngineCtx, g *gin.Engine) {
 	g.POST("/rewindState", HandleRewindState(ctx))
 }

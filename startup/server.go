@@ -16,12 +16,12 @@ func NewGameEngine(tickRate, randSeed int, tables ...state.ITable) *server.Engin
 	s.Use(server.CORSMiddleware())
 
 	gameWorld := state.NewWorld()
+	gameWorld.AddTables(tables...)
 
 	gameTick := server.NewGameTick(tickRate)
 	gameTick.Schedule = server.NewTickSchedule()
 
 	server.RegisterDefaultTables(gameWorld)
-	gameWorld.AddTables(tables...)
 
 	// this is the master game context being passed around, containing pointers to everything
 	gameCtx := &server.EngineCtx{
@@ -36,10 +36,18 @@ func NewGameEngine(tickRate, randSeed int, tables ...state.ITable) *server.Engin
 	return gameCtx
 }
 
-func RegisterSQLHandlers(gameCtx *server.EngineCtx, g *gin.Engine, saveInterval time.Duration, saveStateHandler server.ISaveState, saveTxHandler server.ISaveTransactions) {
-	gameCtx.SaveStateHandler, gameCtx.SaveTransactionsHandler = saveStateHandler, saveTxHandler
-	server.RegisterHTTPSQLRoutes(gameCtx, g)
+func RegisterSaveStateHandler(gameCtx *server.EngineCtx, saveStateHandler server.ISaveState, saveInterval time.Duration) {
+	gameCtx.SaveStateHandler = saveStateHandler
 	server.SetupSaveStateLoop(gameCtx, saveInterval)
+}
+
+func RegisterSaveTxHandler(gameCtx *server.EngineCtx, saveTxHandler server.ISaveTransactions, saveInterval time.Duration) {
+	gameCtx.SaveTransactionsHandler = saveTxHandler
+	server.SetupSaveTxLoop(gameCtx, saveInterval)
+}
+
+func RegisterRewindEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/rewindState", server.HandleRewindState(ctx))
 }
 
 func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
@@ -53,8 +61,11 @@ func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.IS
 	return nil
 }
 
-func RegisterNotificationHandlers(gameCtx *server.EngineCtx, broadcastHandler server.ISystemBroadcastHandler, errorHandler server.ISystemErrorHandler) {
+func RegisterBroadcastHandler(gameCtx *server.EngineCtx, broadcastHandler server.ISystemBroadcastHandler) {
 	gameCtx.SystemBroadcastHandler = broadcastHandler
+}
+
+func RegisterErrorHandler(gameCtx *server.EngineCtx, errorHandler server.ISystemErrorHandler) {
 	gameCtx.SystemErrorHandler = errorHandler
 }
 
