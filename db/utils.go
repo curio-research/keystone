@@ -10,39 +10,33 @@ import (
 )
 
 // initialize and set mySQL handlers to server context
-func InitializeMySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+func MySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	dialector := mysql.Open(mySQLDSN)
 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	ctx.SaveStateHandler = saveStateHandler
-	ctx.SaveTransactionsHandler = saveTransactionsHandler
-	return nil
+	return saveStateHandler, saveTransactionsHandler, nil
 }
 
 // use file path to open DB
-func InitializeSQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+func SQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	dialector := sqlite.Open(sqliteDBFilePath)
 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
-	if err != nil {
-		return err
-	}
-
-	ctx.SaveStateHandler = saveStateHandler
-	ctx.SaveTransactionsHandler = saveTransactionsHandler
-	return nil
-
-}
-
-func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
-	saveStateHandler, err := newSQLSaveStateHandler(dialector, gameId, accessors)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txHandler, err := newSQLSaveTransactionHandler(dialector, gameId)
+	return saveStateHandler, saveTransactionsHandler, nil
+}
+
+func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+	saveStateHandler, err := SQLSaveStateHandler(dialector, gameId, accessors)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	txHandler, err := SQLSaveTransactionHandler(dialector, gameId)
 	if err != nil {
 		return nil, nil, err
 	}
