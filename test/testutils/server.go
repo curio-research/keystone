@@ -24,7 +24,7 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumbe
 	for _, accessor := range schemaToTableAccessors {
 		tables = append(tables, accessor)
 	}
-	ctx := startup.NewGameEngine(20, randSeedNumber, tables...)
+	ctx := startup.NewGameEngine("test", 20, randSeedNumber, tables...)
 
 	// initialize a websocket streaming server for both incoming and outgoing requests
 	err := startup.RegisterWSRoutes(ctx, s, SocketRequestRouter, websocketPort)
