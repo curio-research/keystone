@@ -149,7 +149,7 @@ func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx
 		tables = append(tables, accessor)
 	}
 
-	ctx := startup.NewGameEngine("test", server.TickRate, 0, tables...)
+	ctx := startup.NewGameEngine("test", server.TickRate, tables...)
 	for _, system := range systems {
 		ctx.GameTick.Schedule.AddTickSystem(0, system)
 	}

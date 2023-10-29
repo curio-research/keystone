@@ -2,15 +2,16 @@ package startup
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
-	"sync"
-	"time"
 )
 
-func NewGameEngine(gameID string, tickRate, randSeed int, tables ...state.ITable) *server.EngineCtx {
+func NewGameEngine(gameID string, tickRate int, tables ...state.ITable) *server.EngineCtx {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -30,7 +31,6 @@ func NewGameEngine(gameID string, tickRate, randSeed int, tables ...state.ITable
 		World:                  gameWorld,
 		GameTick:               gameTick,
 		TransactionsToSaveLock: sync.Mutex{},
-		RandSeed:               randSeed,
 	}
 
 	return gameCtx

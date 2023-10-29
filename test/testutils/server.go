@@ -3,7 +3,6 @@ package testutils
 import (
 	"database/sql"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/curio-research/keystone/startup"
@@ -26,16 +25,14 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 	for _, accessor := range schemaToTableAccessors {
 		tables = append(tables, accessor)
 	}
-	ctx := startup.NewGameEngine("test", 20, randSeedNumber, tables...)
 
-	// this is the master game context being passed around, containing pointers to everything
-	gameCtx := &server.EngineCtx{ // TODO create a constructor for this
-		GameId:                 "test",
-		IsLive:                 true,
-		World:                  gameWorld,
-		GameTick:               gameTick,
-		TransactionsToSaveLock: sync.Mutex{},
-		Mode:                   mode,
+	tickRate := 20 // 20 ms
+	ctx := startup.NewGameEngine("test", tickRate, tables...)
+
+	// initialize a websocket streaming server for both incoming and outgoing requests
+	err := startup.RegisterWSRoutes(ctx, s, SocketRequestRouter, websocketPort)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	startup.RegisterErrorHandler(ctx, NewMockErrorHandler())
 
