@@ -2,9 +2,11 @@ package testutils
 
 import (
 	"database/sql"
-	"github.com/curio-research/keystone/startup"
 	"strconv"
+	"sync"
 	"testing"
+
+	"github.com/curio-research/keystone/startup"
 
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
@@ -15,7 +17,7 @@ import (
 )
 
 // TODO refactor http to also be started inside here
-func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumber int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
+func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -26,10 +28,14 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, randSeedNumbe
 	}
 	ctx := startup.NewGameEngine("test", 20, randSeedNumber, tables...)
 
-	// initialize a websocket streaming server for both incoming and outgoing requests
-	err := startup.RegisterWSRoutes(ctx, s, SocketRequestRouter, websocketPort)
-	if err != nil {
-		return nil, nil, nil, err
+	// this is the master game context being passed around, containing pointers to everything
+	gameCtx := &server.EngineCtx{ // TODO create a constructor for this
+		GameId:                 "test",
+		IsLive:                 true,
+		World:                  gameWorld,
+		GameTick:               gameTick,
+		TransactionsToSaveLock: sync.Mutex{},
+		Mode:                   mode,
 	}
 	startup.RegisterErrorHandler(ctx, NewMockErrorHandler())
 

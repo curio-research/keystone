@@ -19,6 +19,19 @@ func MySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interfa
 	return saveStateHandler, saveTransactionsHandler, nil
 }
 
+// TODO: pass in dialector
+
+// func InitializeSQLiteHandlersWithDialector(ctx *server.EngineCtx, dialector gorm.Dialector, accessors map[interface{}]*state.TableBaseAccessor[any]) error {
+// 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	ctx.SaveStateHandler = saveStateHandler
+// 	ctx.SaveTransactionsHandler = saveTransactionsHandler
+// 	return nil
+// }
+
 // use file path to open DB
 func SQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	dialector := sqlite.Open(sqliteDBFilePath)
