@@ -51,6 +51,11 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 		startup.RegisterRewindEndpoint(ctx, s)
 	}
 
+	// http api routes
+	startup.RegisterGetEntityValueEndpoint(ctx, s)
+	startup.RegisterGetStateEndpoint(ctx, s)
+	startup.RegisterGetStateRootHashEndpoint(ctx, s)
+
 	return s, ctx, db, nil
 }
 

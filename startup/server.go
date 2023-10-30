@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/server/routes"
 	"github.com/curio-research/keystone/state"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,18 @@ func RegisterSaveTxHandler(gameCtx *server.EngineCtx, saveTxHandler server.ISave
 
 func RegisterRewindEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
 	g.POST("/rewindState", server.HandleRewindState(ctx))
+}
+
+func RegisterGetStateEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/getState", routes.GetStateRouteHandler(ctx))
+}
+
+func RegisterGetEntityValueEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/entityValue", routes.GetEntityValueRouteHandler(ctx))
+}
+
+func RegisterGetStateRootHashEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/stateRoot", routes.StateRootRouteHandler(ctx))
 }
 
 func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
