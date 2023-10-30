@@ -1,6 +1,10 @@
 package test
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/startup"
 	"github.com/curio-research/keystone/state"
@@ -72,31 +76,66 @@ type Token struct {
 	Id              int `gorm:"primaryKey;autoIncrement:false"`
 }
 
-type NestedStruct struct {
-	Name  string
-	Age   int
-	Happy bool
-	Books []Book
-	Pos   state.Pos `gorm:"embedded"`
+type PetKind int
+
+const (
+	Dog PetKind = iota
+	Cat
+)
+
+type Pet struct {
+	Kind PetKind `json:"kind"`
+	Name string  `json:"name"`
 }
 
-type EmbeddedStructSchema struct {
-	Emb    NestedStruct `gorm:"embedded"`
-	People []Person
-	Id     int `gorm:"primaryKey;autoIncrement:false"`
+type Owner struct {
+	Name  string         `json:"name"`
+	Age   int            `json:"age"`
+	Happy bool           `json:"happy"`
+	Pets  JSONArray[Pet] `json:"pets" gorm:"type:json"`
+	Pos   state.Pos      `gorm:"embedded"`
+}
+
+type PetCommunity struct {
+	Owners JSONArray[Owner] `gorm:"type:json"`
+	Id     int              `gorm:"primaryKey;autoIncrement:false"`
+}
+
+// Scan scan value into Jsonb, implements sql.Scanner interface
+type JSONArray[T any] []T
+
+func (j *JSONArray[T]) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSONB value:", value))
+	}
+
+	err := json.Unmarshal(bytes, j)
+	return err
+}
+
+func (j JSONArray[T]) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+	data, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 var personTable = state.NewTableAccessor[Person]()
 var bookTable = state.NewTableAccessor[Book]()
 var tokenTable = state.NewTableAccessor[Token]()
-var embeddedStructTable = state.NewTableAccessor[EmbeddedStructSchema]()
+var embeddedStructTable = state.NewTableAccessor[PetCommunity]()
 
 var testSchemaToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
 	&Person{}:                   (*state.TableBaseAccessor[any])(personTable),
 	&Book{}:                     (*state.TableBaseAccessor[any])(bookTable),
 	&Token{}:                    (*state.TableBaseAccessor[any])(tokenTable),
 	&server.TransactionSchema{}: (*state.TableBaseAccessor[any])(server.TransactionTable),
-	&EmbeddedStructSchema{}:     (*state.TableBaseAccessor[any])(embeddedStructTable),
+	&PetCommunity{}:             (*state.TableBaseAccessor[any])(embeddedStructTable),
 }
 
 func testRegisterTables(w *state.GameWorld) {
