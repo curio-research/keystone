@@ -292,7 +292,6 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 	}
 
 	go func() {
-		fmt.Println("starting server at ", addr)
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("http server closed with unexpected error %v", err)
