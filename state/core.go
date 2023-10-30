@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/json"
 	"reflect"
 	"sync"
 	"time"
@@ -29,9 +30,9 @@ type Table struct {
 	// fieldName => fieldVal => entities sparse set
 	//
 	// ex: Person {name string, age int}
-	// name => "Alice" => [1, 2, 3]
-	// age => 20 => [3, 5, 11]
-	Indexes map[string]map[any]*SparseSet // TODO create a struct that locks this
+	// "name" => "Alice" => [1, 2, 3]
+	// "age" => "20" => [3, 5, 11] // json representation of int
+	Indexes map[string]map[string]*SparseSet // TODO create a struct that locks this
 
 	mu *sync.Mutex
 }
@@ -44,7 +45,7 @@ func NewTable(w *GameWorld, table ITable) Table {
 		Type:          table.Type(),
 		Entities:      NewSparseSet(),
 		EntityToValue: make(map[int]any),
-		Indexes:       make(map[string]map[any]*SparseSet),
+		Indexes:       make(map[string]map[string]*SparseSet),
 		mu:            &sync.Mutex{},
 	}
 }
@@ -82,24 +83,25 @@ func (t *Table) Set(w *GameWorld, entity int, value any) any {
 		fieldNameMapping := t.Indexes[field.Name]
 
 		if fieldNameMapping == nil {
-			fieldNameMapping = make(map[any]*SparseSet)
+			fieldNameMapping = make(map[string]*SparseSet)
 			t.Indexes[field.Name] = fieldNameMapping
 		}
 
 		// remove value => entity mapping for the previous value if the old value exists
 		if prevVal != nil {
 			prevFieldValue := _prevV.Field(i)
-			fieldNameMapping[prevFieldValue.Interface()].Remove(entity)
+			fieldNameMapping[tableKey(prevFieldValue)].Remove(entity)
 		}
 
 		// create new set if not present
-		if fieldNameMapping[fieldValue.Interface()] == nil {
-			fieldNameMapping[fieldValue.Interface()] = NewSparseSet()
+
+		key := tableKey(fieldValue)
+		if fieldNameMapping[key] == nil {
+			fieldNameMapping[key] = NewSparseSet()
 		}
 
 		// add value
-		fieldNameMapping[fieldValue.Interface()].Add(entity)
-
+		fieldNameMapping[key].Add(entity)
 	}
 
 	update := TableUpdate{Entity: entity, Table: t.Name, Value: value, OP: UpdateOP, Time: time.Now().Unix()}
@@ -155,7 +157,7 @@ func (t *Table) RemoveEntity(w *GameWorld, entity int) {
 		fieldValue := v.Field(i)
 
 		fieldMapping := t.Indexes[field.Name]
-		fieldMapping[fieldValue.Interface()].Remove(entity)
+		fieldMapping[tableKey(fieldValue)].Remove(entity)
 	}
 
 	update := TableUpdate{Entity: entity, Table: t.Name, Value: val, OP: RemovalOP, Time: time.Now().Unix()}
@@ -271,13 +273,14 @@ func (t *Table) Filter(filter any, fieldNames []string) []int {
 		if fieldNameMapping == nil {
 			return []int{}
 		}
-		return t.Indexes[fieldNames[0]][fieldValue.Interface()].GetAll()
+
+		return t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
 	}
 
 	// we take the first one first
 	fieldValue := v.FieldByName(fieldNames[0])
 
-	var res []int = t.Indexes[fieldNames[0]][fieldValue.Interface()].GetAll()
+	var res []int = t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
 
 	queryCtx := NewQueryContext()
 
@@ -292,17 +295,20 @@ func (t *Table) Filter(filter any, fieldNames []string) []int {
 		// field doesn't exist
 		if fieldMapping == nil {
 			return []int{}
-
 		} else {
-
 			// value => return entities that match the value of this struct's field
-			valueSet := fieldMapping[fieldVal.Interface()]
+			valueSet := fieldMapping[tableKey(fieldVal)]
 
 			res = ArrayIntersectionWithContext(queryCtx, res, valueSet.GetAll())
 		}
 	}
 
 	return res
+}
+
+func tableKey(val reflect.Value) string {
+	v, _ := json.Marshal(val.Interface())
+	return string(v)
 }
 
 type tableNameAndType struct {

@@ -76,12 +76,14 @@ type NestedStruct struct {
 	Name  string
 	Age   int
 	Happy bool
+	Books []Book
 	Pos   state.Pos `gorm:"embedded"`
 }
 
 type EmbeddedStructSchema struct {
-	Emb NestedStruct `gorm:"embedded"`
-	Id  int          `gorm:"primaryKey;autoIncrement:false"`
+	Emb    NestedStruct `gorm:"embedded"`
+	People []Person
+	Id     int `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()
