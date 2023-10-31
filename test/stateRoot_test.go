@@ -22,13 +22,13 @@ func TestStateHash(t *testing.T) {
 
 type tableASchema struct {
 	Name string
-	Id   int
+	Id   int `gorm:"primaryKey"`
 }
 
 type tableBSchema struct {
 	Gold   int
 	IsLive bool
-	Id     int
+	Id     int `gorm:"primaryKey"`
 }
 
 var tableAAccessor = state.NewTableAccessor[tableASchema]()

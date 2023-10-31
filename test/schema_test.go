@@ -9,7 +9,12 @@ import (
 func TestSchema_NestedStruct(t *testing.T) {
 	ctx := initializeTestWorld()
 
-	embeddedStructEntity := embeddedStructTable.Add(ctx.World, PetCommunity{
+	embeddedStructEntity := petCommunityTable.Add(ctx.World, PetCommunity{
+		Committee: Committee{
+			CommitteeOwners: []Owner{
+				{Name: testName1},
+				{Name: testName2},
+			}},
 		Owners: []Owner{
 			{
 				Name:  testName1,
@@ -42,8 +47,13 @@ func TestSchema_NestedStruct(t *testing.T) {
 		},
 	})
 
-	embeddedStruct := embeddedStructTable.Get(ctx.World, embeddedStructEntity)
+	embeddedStruct := petCommunityTable.Get(ctx.World, embeddedStructEntity)
 	assert.Equal(t, embeddedStructEntity, embeddedStruct.Id)
+
+	committee := embeddedStruct.Committee
+	require.Len(t, committee.CommitteeOwners, 2)
+	assert.Equal(t, testName1, committee.CommitteeOwners[0].Name)
+	assert.Equal(t, testName2, committee.CommitteeOwners[1].Name)
 
 	owners := embeddedStruct.Owners
 	require.Len(t, owners, 2)

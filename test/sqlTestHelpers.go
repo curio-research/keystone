@@ -103,11 +103,16 @@ func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQ
 func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveStateHandler) {
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
-		embeddedStructTable.AddSpecific(w, testEntity1, PetCommunity{
+		petCommunityTable.AddSpecific(w, testEntity1, PetCommunity{
+			Committee: Committee{
+				CommitteeOwners: []Owner{
+					{Name: testName1},
+					{Name: testName2},
+				}},
 			Owners: []Owner{
 				{
 					Name:  testName1,
-					Age:   26,
+					Age:   testAge1,
 					Happy: true,
 					Pos:   testPos1,
 					Pets: []Pet{
@@ -123,7 +128,7 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 				},
 				{
 					Name:  testName2,
-					Age:   25,
+					Age:   testAge2,
 					Happy: true,
 					Pos:   testPos2,
 					Pets: []Pet{
@@ -145,16 +150,36 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 	newGw := newGameEngine.World
 	require.Nil(t, saveStateHandler.RestoreState(newGameEngine, ""))
 
-	esActual := embeddedStructTable.Get(newGw, testEntity1)
-	assert.Equal(t, testEntity1, esActual.Id)
+	embeddedStruct := petCommunityTable.Get(newGw, testEntity1)
+	assert.Equal(t, testEntity1, embeddedStruct.Id)
 
-	owners := esActual.Owners
+	committee := embeddedStruct.Committee
+	require.Len(t, committee.CommitteeOwners, 2)
+	assert.Equal(t, testName1, committee.CommitteeOwners[0].Name)
+	assert.Equal(t, testName2, committee.CommitteeOwners[1].Name)
+
+	owners := embeddedStruct.Owners
 	require.Len(t, owners, 2)
-	assert.Equal(t, testPos1, owners[0].Pos)
-	assert.Equal(t, true, owners[0].Happy)
-	assert.Equal(t, 26, owners[0].Age)
-	assert.Equal(t, testName1, owners[0].Name)
 
+	owner1 := owners[0]
+	assert.Equal(t, testName1, owner1.Name)
+	assert.Equal(t, testAge1, owner1.Age)
+	assert.Len(t, owner1.Pets, 2)
+	assert.Equal(t, testPos1, owner1.Pos)
+	assert.True(t, owner1.Happy)
+
+	require.Len(t, owner1.Pets, 2)
+	assert.Equal(t, Dog, owner1.Pets[0].Kind)
+	assert.Equal(t, "odie", owner1.Pets[0].Name)
+	assert.Equal(t, Cat, owner1.Pets[1].Kind)
+	assert.Equal(t, "squishy", owner1.Pets[1].Name)
+
+	owner2 := owners[1]
+	assert.Equal(t, testName2, owner2.Name)
+	assert.Equal(t, testAge2, owner2.Age)
+	require.Len(t, owner2.Pets, 1)
+	assert.Equal(t, Dog, owner2.Pets[0].Kind)
+	assert.Equal(t, "sherlock", owner2.Pets[0].Name)
 }
 
 // core test restore state from transactions
