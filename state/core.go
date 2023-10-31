@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/curio-research/keystone/utils"
+	"github.com/golang-collections/collections/stack"
 	"reflect"
 	"strings"
 	"sync"
@@ -204,7 +205,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	idTag := field.Tag.Get("gorm")
 	if !strings.Contains(t.String(), "TransactionSchema") {
 		if !strings.Contains(idTag, "primaryKey") {
-			panic("Id field needs `gorm:\"primaryKey\"` tag")
+			panic(fmt.Sprintf("Id field of %s needs `gorm:\"primaryKey\"` tag", t.Name()))
 		}
 	}
 
@@ -212,21 +213,29 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	jsonArrayName = strings.Split(jsonArrayName, "[")[0]
 	jsonArrayName = strings.Split(jsonArrayName, ".")[1]
 
+	stk := stack.New()
 	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		kind := field.Type.Kind()
+		stk.Push(t.Field(i))
+	}
+
+	for stk.Len() != 0 {
+		f := stk.Pop().(reflect.StructField)
+		kind := f.Type.Kind()
+		gormTag := f.Tag.Get("gorm")
 		if kind == reflect.Slice {
-			if !strings.Contains(field.Type.Name(), jsonArrayName) {
-				panic(fmt.Sprintf("Every array in the top level of a schema must be of SerializableArray type"))
+			if !strings.Contains(f.Type.Name(), jsonArrayName) {
+				panic(fmt.Sprintf("Field %s of %s must be of SerializableArray type", f.Name, t.Name()))
 			}
 
-			tag := field.Tag.Get("gorm")
-			if tag != "serializer:json" {
-				panic("Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
+			if gormTag != "serializer:json" {
+				panic(fmt.Sprintf("Field %s of %s needs `gorm:\"serializer:json\"` tag", f.Name, t.Name()))
+			}
+		} else if gormTag == "embedded" {
+			for i := 0; i < f.Type.NumField(); i++ {
+				stk.Push(f.Type.Field(i))
 			}
 		}
 	}
-
 	return base
 }
 

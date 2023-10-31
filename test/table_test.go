@@ -212,3 +212,43 @@ func Test_PanicWithWrongArrayType(t *testing.T) {
 		state.NewTableAccessor[correctStruct]()
 	})
 }
+
+func Test_PanicWithWrongArrayType_EmbeddedArray(t *testing.T) {
+	type embeddedStruct struct {
+		Arr []string
+	}
+
+	type structWithWrongArray struct {
+		Emb embeddedStruct `gorm:"embedded"`
+		Id  int            `gorm:"primaryKey"`
+	}
+
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithWrongArray]()
+	}, "Every array in its own column must be of SerializableArray type")
+
+	type embeddedStruct2 struct {
+		Arr utils.SerializableArray[string]
+	}
+
+	type structWithWrongArrayTag struct {
+		Emb embeddedStruct2 `gorm:"embedded"`
+		Id  int             `gorm:"primaryKey"`
+	}
+
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithWrongArrayTag]()
+	}, "Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
+
+	type embeddedStruct3 struct {
+		Arr utils.SerializableArray[string] `gorm:"serializer:json"`
+	}
+
+	type correctStruct struct {
+		Emb embeddedStruct3 `gorm:"embedded"`
+		Id  int             `gorm:"primaryKey"`
+	}
+	assert.NotPanics(t, func() {
+		state.NewTableAccessor[correctStruct]()
+	})
+}

@@ -93,22 +93,27 @@ type Owner struct {
 	Pos   state.Pos `json:"pos" gorm:"embedded"`
 }
 
+type Committee struct {
+	CommitteeOwners utils.SerializableArray[Owner] `gorm:"serializer:json"`
+}
+
 type PetCommunity struct {
-	Owners utils.SerializableArray[Owner] `gorm:"serializer:json"`
-	Id     int                            `gorm:"primaryKey;autoIncrement:false"`
+	Owners    utils.SerializableArray[Owner] `gorm:"serializer:json"`
+	Committee Committee                      `gorm:"embedded"`
+	Id        int                            `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()
 var bookTable = state.NewTableAccessor[Book]()
 var tokenTable = state.NewTableAccessor[Token]()
-var embeddedStructTable = state.NewTableAccessor[PetCommunity]()
+var petCommunityTable = state.NewTableAccessor[PetCommunity]()
 
 var testSchemaToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
 	&Person{}:                   (*state.TableBaseAccessor[any])(personTable),
 	&Book{}:                     (*state.TableBaseAccessor[any])(bookTable),
 	&Token{}:                    (*state.TableBaseAccessor[any])(tokenTable),
 	&server.TransactionSchema{}: (*state.TableBaseAccessor[any])(server.TransactionTable),
-	&PetCommunity{}:             (*state.TableBaseAccessor[any])(embeddedStructTable),
+	&PetCommunity{}:             (*state.TableBaseAccessor[any])(petCommunityTable),
 }
 
 func testRegisterTables(w *state.GameWorld) {
