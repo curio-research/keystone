@@ -8,9 +8,9 @@ import (
 
 // Wrapper for adding JSON array to MySQL or SQLite database
 // Make sure to add `gorm:"serializer:json"` as tag on the field using this
-type JSONArray[T any] []T
+type SerializableArray[T any] []T
 
-func (j *JSONArray[T]) Scan(value interface{}) error {
+func (j *SerializableArray[T]) Scan(value interface{}) error {
 	switch val := value.(type) {
 	case []uint8: // SQLite
 		err := json.Unmarshal(val, j)
@@ -29,7 +29,7 @@ func (j *JSONArray[T]) Scan(value interface{}) error {
 	return nil
 }
 
-func (j *JSONArray[T]) Value() (driver.Value, error) {
+func (j *SerializableArray[T]) Value() (driver.Value, error) {
 	if j == nil || len(*j) == 0 {
 		return nil, nil
 	}

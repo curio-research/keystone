@@ -94,8 +94,8 @@ type Owner struct {
 }
 
 type PetCommunity struct {
-	Owners utils.JSONArray[Owner] `gorm:"serializer:json"`
-	Id     int                    `gorm:"primaryKey;autoIncrement:false"`
+	Owners utils.SerializableArray[Owner] `gorm:"serializer:json"`
+	Id     int                            `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()

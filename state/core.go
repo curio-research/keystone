@@ -208,7 +208,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 		}
 	}
 
-	jsonArrayName := reflect.TypeOf(utils.JSONArray[any]{}).String()
+	jsonArrayName := reflect.TypeOf(utils.SerializableArray[any]{}).String()
 	jsonArrayName = strings.Split(jsonArrayName, "[")[0]
 	jsonArrayName = strings.Split(jsonArrayName, ".")[1]
 
@@ -217,7 +217,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 		kind := field.Type.Kind()
 		if kind == reflect.Slice {
 			if !strings.Contains(field.Type.Name(), jsonArrayName) {
-				panic(fmt.Sprintf("Every array in the top level of a schema must be of JSONArray type"))
+				panic(fmt.Sprintf("Every array in the top level of a schema must be of SerializableArray type"))
 			}
 
 			tag := field.Tag.Get("gorm")

@@ -194,19 +194,19 @@ func Test_PanicWithWrongArrayType(t *testing.T) {
 	}
 	assert.Panicsf(t, func() {
 		state.NewTableAccessor[structWithWrongArray]()
-	}, "Every array in the top level of a schema must be of JSONArray type")
+	}, "Every array in the top level of a schema must be of SerializableArray type")
 
 	type structWithWrongArrayTag struct {
-		Arr utils.JSONArray[string] `gorm:"type:json"`
-		Id  int                     `gorm:"primaryKey"`
+		Arr utils.SerializableArray[string] `gorm:"type:json"`
+		Id  int                             `gorm:"primaryKey"`
 	}
 	assert.Panicsf(t, func() {
 		state.NewTableAccessor[structWithWrongArrayTag]()
 	}, "Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
 
 	type correctStruct struct {
-		Arr utils.JSONArray[string] `gorm:"serializer:json"`
-		Id  int                     `gorm:"primaryKey"`
+		Arr utils.SerializableArray[string] `gorm:"serializer:json"`
+		Id  int                             `gorm:"primaryKey"`
 	}
 	assert.NotPanics(t, func() {
 		state.NewTableAccessor[correctStruct]()
