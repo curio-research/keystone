@@ -1,2 +1,2 @@
-* Add gameID into game engine creation helper function
-* Use helper functions in another test engine creation
+- Add state root calculator
+- Add support for nested structs and arrays in schemas, with support for SQL and SQLite state sync
