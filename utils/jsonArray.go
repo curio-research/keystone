@@ -12,12 +12,12 @@ type JSONArray[T any] []T
 
 func (j *JSONArray[T]) Scan(value interface{}) error {
 	switch val := value.(type) {
-	case []uint8:
+	case []uint8: // SQLite
 		err := json.Unmarshal(val, j)
 		if err != nil {
 			return err
 		}
-	case string:
+	case string: // MySQL
 		err := json.Unmarshal([]byte(val), j)
 		if err != nil {
 			return err
@@ -29,12 +29,12 @@ func (j *JSONArray[T]) Scan(value interface{}) error {
 	return nil
 }
 
-func (j JSONArray[T]) Value() (driver.Value, error) {
-	if len(j) == 0 {
+func (j *JSONArray[T]) Value() (driver.Value, error) {
+	if j == nil || len(*j) == 0 {
 		return nil, nil
 	}
 
-	data, err := json.Marshal(j)
+	data, err := json.Marshal(*j)
 	if err != nil {
 		return nil, err
 	}

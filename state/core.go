@@ -2,7 +2,10 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/curio-research/keystone/utils"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 )
@@ -194,10 +197,34 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	}
 
 	// check if the schema has an id field
-	_, exists := t.FieldByName("Id")
-
+	field, exists := t.FieldByName("Id")
 	if !exists {
 		panic("Every schema must have an Id field (we use this when syncing game state)")
+	}
+	idTag := field.Tag.Get("gorm")
+	if !strings.Contains(t.String(), "TransactionSchema") {
+		if !strings.Contains(idTag, "primaryKey") {
+			panic("Id field needs `gorm:\"primaryKey\"` tag")
+		}
+	}
+
+	jsonArrayName := reflect.TypeOf(utils.JSONArray[any]{}).String()
+	jsonArrayName = strings.Split(jsonArrayName, "[")[0]
+	jsonArrayName = strings.Split(jsonArrayName, ".")[1]
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		kind := field.Type.Kind()
+		if kind == reflect.Slice {
+			if !strings.Contains(field.Type.Name(), jsonArrayName) {
+				panic(fmt.Sprintf("Every array in the top level of a schema must be of JSONArray type"))
+			}
+
+			tag := field.Tag.Get("gorm")
+			if tag != "serializer:json" {
+				panic("Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
+			}
+		}
 	}
 
 	return base
