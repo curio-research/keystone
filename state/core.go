@@ -224,7 +224,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 		gormTag := f.Tag.Get("gorm")
 		if kind == reflect.Slice {
 			if !strings.Contains(f.Type.Name(), jsonArrayName) {
-				panic(fmt.Sprintf("Every array in the top level of a schema must be of SerializableArray type"))
+				panic(fmt.Sprintf("Every array in its own column must be of SerializableArray type"))
 			}
 
 			if gormTag != "serializer:json" {
