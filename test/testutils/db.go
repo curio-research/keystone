@@ -18,7 +18,7 @@ var testSQLDSN string
 
 func init() {
 	if err := godotenv.Load("../.env"); err != nil {
-		panic(err)
+		fmt.Println("Failed to load .env file")
 	}
 	testSQLDSN = os.Getenv("SQL_DSN")
 

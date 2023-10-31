@@ -3,18 +3,21 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	"github.com/curio-research/keystone/server"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/curio-research/keystone/test/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
 )
 
 func TestRewind(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	ctx, _, s, _, db := startTestServer(t, server.DevSQL)
 	defer db.Close()
 
@@ -119,6 +122,7 @@ func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data T) 
 }
 
 func resetWorldAndTick(ctx *server.EngineCtx) {
+
 	w := ctx.World
 	for _, table := range w.Tables {
 		entities := table.Entities.GetAll()

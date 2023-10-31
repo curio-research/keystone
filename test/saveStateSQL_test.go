@@ -7,6 +7,7 @@ import (
 
 	"github.com/curio-research/keystone/db"
 	gamedb "github.com/curio-research/keystone/db"
+	"github.com/curio-research/keystone/test/testutils"
 
 	"github.com/curio-research/keystone/state"
 	_ "github.com/go-sql-driver/mysql"
@@ -17,6 +18,8 @@ import (
 var sqlDSN string
 
 func TestMySQLSaveStateHandler(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	handler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -24,6 +27,8 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_Removal(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -31,6 +36,8 @@ func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 }
 
 func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -38,6 +45,8 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 }
 
 func TestMySQLRestoreStateFromTxs(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	_, mySQLTxHandler, db := setupMySQLTestDB(t, testGameID2, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -46,6 +55,8 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 }
 
 func TestMySQLMultipleGames_SaveState(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 
@@ -53,6 +64,8 @@ func TestMySQLMultipleGames_SaveState(t *testing.T) {
 }
 
 func TestMultipleGames_SaveTx(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 

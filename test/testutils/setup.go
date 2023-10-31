@@ -23,3 +23,9 @@ func SetupWS(t *testing.T, port int) (*websocket.Conn, error) {
 
 	return c, err
 }
+
+func SkipTestIfShort(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping testing in short mode")
+	}
+}
