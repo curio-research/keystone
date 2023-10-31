@@ -12,5 +12,8 @@ const (
 	SaveStateInterval       = time.Second * 10
 	DevSQLSaveStateInterval = time.Second
 
+	DefaultServerPort    = 9000
+	DefaultWebsocketPort = 9001
+
 	TickRate = 100
 )
