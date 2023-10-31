@@ -12,16 +12,17 @@ import (
 // initialize and set mySQL handlers to server context
 func MySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	dialector := mysql.Open(mySQLDSN)
-	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
-	if err != nil {
-		return nil, nil, err
-	}
-	return saveStateHandler, saveTransactionsHandler, nil
+	return SQLHandlersWithDialector(ctx, dialector, accessors)
 }
 
-// use file path to open DB
+// initialize SQLite handler through file path
 func SQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	dialector := sqlite.Open(sqliteDBFilePath)
+	return SQLHandlersWithDialector(ctx, dialector, accessors)
+}
+
+// initialize SQLite handlers through dialector
+func SQLHandlersWithDialector(ctx *server.EngineCtx, dialector gorm.Dialector, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
 	if err != nil {
 		return nil, nil, err

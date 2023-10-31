@@ -282,7 +282,7 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	port, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, db, err := testutils.Server(t, mode, wsPort, 1, testSchemaToAccessors)
+	s, e, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
 	require.Nil(t, err)
 
 	addr := ":" + strconv.Itoa(port)
@@ -292,7 +292,6 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 	}
 
 	go func() {
-		fmt.Println("starting server at ", addr)
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("http server closed with unexpected error %v", err)

@@ -60,8 +60,6 @@ type EngineCtx struct {
 	PendingStateUpdatesToSave []state.TableUpdate
 
 	RegisterTablesToWorldCb func(w *state.GameWorld)
-
-	RandSeed int
 }
 
 // for debugging

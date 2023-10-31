@@ -2,15 +2,17 @@ package startup
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/server/routes"
 	"github.com/curio-research/keystone/state"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gin-gonic/gin"
-	"sync"
-	"time"
 )
 
-func NewGameEngine(gameID string, tickRate, randSeed int, tables ...state.ITable) *server.EngineCtx {
+func NewGameEngine(gameID string, tickRate int, tables ...state.ITable) *server.EngineCtx {
 	gin.SetMode(gin.ReleaseMode)
 	s := gin.Default()
 	s.Use(server.CORSMiddleware())
@@ -30,7 +32,6 @@ func NewGameEngine(gameID string, tickRate, randSeed int, tables ...state.ITable
 		World:                  gameWorld,
 		GameTick:               gameTick,
 		TransactionsToSaveLock: sync.Mutex{},
-		RandSeed:               randSeed,
 	}
 
 	return gameCtx
@@ -48,6 +49,18 @@ func RegisterSaveTxHandler(gameCtx *server.EngineCtx, saveTxHandler server.ISave
 
 func RegisterRewindEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
 	g.POST("/rewindState", server.HandleRewindState(ctx))
+}
+
+func RegisterGetStateEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/getState", routes.GetStateRouteHandler(ctx))
+}
+
+func RegisterGetEntityValueEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/entityValue", routes.GetEntityValueRouteHandler(ctx))
+}
+
+func RegisterGetStateRootHashEndpoint(ctx *server.EngineCtx, g *gin.Engine) {
+	g.POST("/stateRoot", routes.StateRootRouteHandler(ctx))
 }
 
 func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {

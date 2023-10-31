@@ -2,6 +2,7 @@ package test
 
 import (
 	"database/sql"
+	"os"
 	"testing"
 
 	gamedb "github.com/curio-research/keystone/db"
@@ -14,6 +15,7 @@ import (
 )
 
 func TestSQLiteSaveStateHandler(t *testing.T) {
+	resetTestDB()
 	mySQLStateHandler, _, db := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -21,6 +23,7 @@ func TestSQLiteSaveStateHandler(t *testing.T) {
 }
 
 func TestSQLiteSaveStateHandler_Removal(t *testing.T) {
+	resetTestDB()
 	mySQLStateHandler, _, db := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -28,6 +31,7 @@ func TestSQLiteSaveStateHandler_Removal(t *testing.T) {
 }
 
 func TestSQLiteSaveStateHandler_NestedStructs(t *testing.T) {
+	resetTestDB()
 	mySQLStateHandler, _, db := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -35,6 +39,7 @@ func TestSQLiteSaveStateHandler_NestedStructs(t *testing.T) {
 }
 
 func TestSQLitesRestoreStateFromTxs(t *testing.T) {
+	resetTestDB()
 	_, mySQLTxHandler, db := setupSQLiteTestDB(t, testGameID2, true, testSchemaToAccessors)
 	defer db.Close()
 
@@ -42,6 +47,7 @@ func TestSQLitesRestoreStateFromTxs(t *testing.T) {
 }
 
 func TestSQLiteMultipleGames_SaveState(t *testing.T) {
+	resetTestDB()
 	saveStateHandler1, saveTxHandler1, db1 := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	saveStateHandler2, saveTxHandler2, db2 := setupSQLiteTestDB(t, testGameID2, false, testSchemaToAccessors)
 
@@ -49,6 +55,7 @@ func TestSQLiteMultipleGames_SaveState(t *testing.T) {
 }
 
 func TestSQLiteMultipleGames_SaveTx(t *testing.T) {
+	resetTestDB()
 	saveStateHandler1, saveTxHandler1, db1 := setupSQLiteTestDB(t, testGameID1, true, testSchemaToAccessors)
 	saveStateHandler2, saveTxHandler2, db2 := setupSQLiteTestDB(t, testGameID2, false, testSchemaToAccessors)
 
@@ -57,6 +64,28 @@ func TestSQLiteMultipleGames_SaveTx(t *testing.T) {
 
 // local sqlite db for testing
 var testSQLiteDBPath = "test.db"
+
+func resetTestDB() error {
+	dbFileName := testSQLiteDBPath
+
+	// Check if the file exists
+	if _, err := os.Stat(dbFileName); err == nil {
+		// File exists, so delete it
+		err := os.Remove(dbFileName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create an empty file
+	file, err := os.Create(dbFileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return nil
+}
 
 // setup local sqlite test db
 func setupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {

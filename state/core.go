@@ -199,7 +199,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	// check if the schema has an id field
 	field, exists := t.FieldByName("Id")
 	if !exists {
-		panic("Every schema must have an Id field (we use this when syncing game state)")
+		panic(t.Name() + " is missing an Id field (we use this when syncing game state)")
 	}
 	idTag := field.Tag.Get("gorm")
 	if !strings.Contains(t.String(), "TransactionSchema") {

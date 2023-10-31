@@ -2,7 +2,7 @@ package server
 
 // ------------------------------------
 // broadcasts events to client
-// 1) state updates (not used in production right now for game)
+// 1) table state updates
 // 2) user defined events
 // ------------------------------------
 
