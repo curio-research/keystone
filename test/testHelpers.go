@@ -3,7 +3,6 @@ package test
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/startup"
@@ -105,13 +104,22 @@ type PetCommunity struct {
 type JSONArray[T any] []T
 
 func (j *JSONArray[T]) Scan(value interface{}) error {
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New(fmt.Sprint("Failed to unmarshal JSONB value:", value))
+	switch val := value.(type) {
+	case []uint8:
+		err := json.Unmarshal(val, j)
+		if err != nil {
+			return err
+		}
+	case string:
+		err := json.Unmarshal([]byte(val), j)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("not correct type for scanning value from SQL: %v", value)
 	}
 
-	err := json.Unmarshal(bytes, j)
-	return err
+	return nil
 }
 
 func (j JSONArray[T]) Value() (driver.Value, error) {
