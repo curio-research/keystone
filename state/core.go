@@ -205,7 +205,7 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 	idTag := field.Tag.Get("gorm")
 	if !strings.Contains(t.String(), "TransactionSchema") {
 		if !strings.Contains(idTag, "primaryKey") {
-			panic("Id field needs `gorm:\"primaryKey\"` tag")
+			panic(fmt.Sprintf("Id field of %s needs `gorm:\"primaryKey\"` tag", t.Name()))
 		}
 	}
 
@@ -224,11 +224,11 @@ func NewTableAccessor[T any]() *TableBaseAccessor[T] {
 		gormTag := f.Tag.Get("gorm")
 		if kind == reflect.Slice {
 			if !strings.Contains(f.Type.Name(), jsonArrayName) {
-				panic(fmt.Sprintf("Every array in its own column must be of SerializableArray type"))
+				panic(fmt.Sprintf("Field %s of %s must be of SerializableArray type", f.Name, t.Name()))
 			}
 
 			if gormTag != "serializer:json" {
-				panic("Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
+				panic(fmt.Sprintf("Field %s of %s needs `gorm:\"serializer:json\"` tag", f.Name, t.Name()))
 			}
 		} else if gormTag == "embedded" {
 			for i := 0; i < f.Type.NumField(); i++ {
