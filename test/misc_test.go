@@ -9,10 +9,13 @@ import (
 
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/state"
+	"github.com/curio-research/keystone/test/testutils"
 )
 
 func TestEmptyQuerySpeed(t *testing.T) {
-	t.Skip("unskip when running this")
+	testutils.SkipTestIfShort(t)
+
+	testing.Short()
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
 
@@ -30,7 +33,7 @@ func TestEmptyQuerySpeed(t *testing.T) {
 }
 
 func TestQuerySpeed(t *testing.T) {
-	t.Skip("unskip when running this")
+	testutils.SkipTestIfShort(t)
 
 	// testing query through different methods
 	counts := []int{10, 100, 1000, 10000, 100000, 200000, 300000}
@@ -72,7 +75,8 @@ func TestQuerySpeed(t *testing.T) {
 }
 
 func TestBufferTableCreationSpeed(t *testing.T) {
-	t.Skip("unskip when running this")
+	testutils.SkipTestIfShort(t)
+
 	counts := []int{10, 100, 1000, 10000, 100000, 200000, 300000}
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
@@ -104,7 +108,7 @@ func randomInRange(a, b int) int {
 
 // performance test for how fast we can apply a state
 func TestApplyTx(t *testing.T) {
-	t.Skip("unskip when running this")
+	testutils.SkipTestIfShort(t)
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
 
