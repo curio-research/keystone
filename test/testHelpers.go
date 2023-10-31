@@ -4,6 +4,7 @@ import (
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/startup"
 	"github.com/curio-research/keystone/state"
+	"github.com/curio-research/keystone/utils"
 )
 
 var (
@@ -72,29 +73,42 @@ type Token struct {
 	Id              int `gorm:"primaryKey;autoIncrement:false"`
 }
 
-type NestedStruct struct {
-	Name  string
-	Age   int
-	Happy bool
-	Pos   state.Pos `gorm:"embedded"`
+type PetKind int
+
+const (
+	Dog PetKind = iota
+	Cat
+)
+
+type Pet struct {
+	Kind PetKind `json:"kind"`
+	Name string  `json:"name"`
 }
 
-type EmbeddedStructSchema struct {
-	Emb NestedStruct `gorm:"embedded"`
-	Id  int          `gorm:"primaryKey;autoIncrement:false"`
+type Owner struct {
+	Name  string    `json:"name"`
+	Age   int       `json:"age"`
+	Happy bool      `json:"happy"`
+	Pets  []Pet     `json:"pets"`
+	Pos   state.Pos `json:"pos" gorm:"embedded"`
+}
+
+type PetCommunity struct {
+	Owners utils.SerializableArray[Owner] `gorm:"serializer:json"`
+	Id     int                            `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()
 var bookTable = state.NewTableAccessor[Book]()
 var tokenTable = state.NewTableAccessor[Token]()
-var embeddedStructTable = state.NewTableAccessor[EmbeddedStructSchema]()
+var embeddedStructTable = state.NewTableAccessor[PetCommunity]()
 
 var testSchemaToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
 	&Person{}:                   (*state.TableBaseAccessor[any])(personTable),
 	&Book{}:                     (*state.TableBaseAccessor[any])(bookTable),
 	&Token{}:                    (*state.TableBaseAccessor[any])(tokenTable),
 	&server.TransactionSchema{}: (*state.TableBaseAccessor[any])(server.TransactionTable),
-	&EmbeddedStructSchema{}:     (*state.TableBaseAccessor[any])(embeddedStructTable),
+	&PetCommunity{}:             (*state.TableBaseAccessor[any])(embeddedStructTable),
 }
 
 func testRegisterTables(w *state.GameWorld) {

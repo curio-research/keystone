@@ -176,6 +176,7 @@ func convertSQLRowToSchema(rows *sql.Rows, schema interface{}) (interface{}, int
 		name := t.Field(i).Name
 		if name == "Id" {
 			idIndex = i
+			break
 		}
 	}
 

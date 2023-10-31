@@ -103,12 +103,36 @@ func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQ
 func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveStateHandler) {
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
-		embeddedStructTable.AddSpecific(w, testEntity1, EmbeddedStructSchema{
-			Emb: NestedStruct{
-				Name:  testName1,
-				Age:   26,
-				Happy: true,
-				Pos:   testPos2,
+		embeddedStructTable.AddSpecific(w, testEntity1, PetCommunity{
+			Owners: []Owner{
+				{
+					Name:  testName1,
+					Age:   26,
+					Happy: true,
+					Pos:   testPos1,
+					Pets: []Pet{
+						{
+							Name: "odie",
+							Kind: Dog,
+						},
+						{
+							Name: "squishy",
+							Kind: Cat,
+						},
+					},
+				},
+				{
+					Name:  testName2,
+					Age:   25,
+					Happy: true,
+					Pos:   testPos2,
+					Pets: []Pet{
+						{
+							Name: "sherlock",
+							Kind: Dog,
+						},
+					},
+				},
 			},
 		})
 	})
@@ -124,11 +148,12 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 	esActual := embeddedStructTable.Get(newGw, testEntity1)
 	assert.Equal(t, testEntity1, esActual.Id)
 
-	embStruct := esActual.Emb
-	assert.Equal(t, testPos2, embStruct.Pos)
-	assert.Equal(t, true, embStruct.Happy)
-	assert.Equal(t, 26, embStruct.Age)
-	assert.Equal(t, testName1, embStruct.Name)
+	owners := esActual.Owners
+	require.Len(t, owners, 2)
+	assert.Equal(t, testPos1, owners[0].Pos)
+	assert.Equal(t, true, owners[0].Happy)
+	assert.Equal(t, 26, owners[0].Age)
+	assert.Equal(t, testName1, owners[0].Name)
 
 }
 

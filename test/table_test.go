@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/curio-research/keystone/utils"
 	"testing"
 
 	"github.com/curio-research/keystone/state"
@@ -159,4 +160,55 @@ func TestProcessTxs(t *testing.T) {
 	if len(res) != 0 {
 		t.Error("Expected empty result because we query by a wrong field name")
 	}
+}
+
+func Test_PanicWithNoID(t *testing.T) {
+	type structWithoutID struct {
+		Name string
+	}
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithoutID]()
+	}, "Every schema must have an Id field (we use this when syncing game state)")
+
+	type structWithoutTag struct {
+		Name string
+		Id   int
+	}
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithoutTag]()
+	}, "Id field needs `gorm:\"primaryKey\"` tag")
+
+	type structWithID struct {
+		Name string
+		Id   int `gorm:"primaryKey"`
+	}
+	assert.NotPanics(t, func() {
+		state.NewTableAccessor[structWithID]()
+	})
+}
+
+func Test_PanicWithWrongArrayType(t *testing.T) {
+	type structWithWrongArray struct {
+		Arr []string
+		Id  int `gorm:"primaryKey"`
+	}
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithWrongArray]()
+	}, "Every array in the top level of a schema must be of SerializableArray type")
+
+	type structWithWrongArrayTag struct {
+		Arr utils.SerializableArray[string] `gorm:"type:json"`
+		Id  int                             `gorm:"primaryKey"`
+	}
+	assert.Panicsf(t, func() {
+		state.NewTableAccessor[structWithWrongArrayTag]()
+	}, "Array field in top level of a struct needs `gorm:\"serializer:json\"` tag")
+
+	type correctStruct struct {
+		Arr utils.SerializableArray[string] `gorm:"serializer:json"`
+		Id  int                             `gorm:"primaryKey"`
+	}
+	assert.NotPanics(t, func() {
+		state.NewTableAccessor[correctStruct]()
+	})
 }
