@@ -1,12 +1,10 @@
 package test
 
 import (
-	"database/sql/driver"
-	"encoding/json"
-	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/startup"
 	"github.com/curio-research/keystone/state"
+	"github.com/curio-research/keystone/utils"
 )
 
 var (
@@ -96,43 +94,8 @@ type Owner struct {
 }
 
 type PetCommunity struct {
-	Owners JSONArray[Owner] `gorm:"serializer:json"`
-	Id     int              `gorm:"primaryKey;autoIncrement:false"`
-}
-
-// Scan scan value into Jsonb, implements sql.Scanner interface
-type JSONArray[T any] []T
-
-func (j *JSONArray[T]) Scan(value interface{}) error {
-	switch val := value.(type) {
-	case []uint8:
-		err := json.Unmarshal(val, j)
-		if err != nil {
-			return err
-		}
-	case string:
-		err := json.Unmarshal([]byte(val), j)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("not correct type for scanning value from SQL: %v", value)
-	}
-
-	return nil
-}
-
-func (j JSONArray[T]) Value() (driver.Value, error) {
-	if len(j) == 0 {
-		return nil, nil
-	}
-
-	data, err := json.Marshal(j)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	Owners utils.JSONArray[Owner] `gorm:"serializer:json"`
+	Id     int                    `gorm:"primaryKey;autoIncrement:false"`
 }
 
 var personTable = state.NewTableAccessor[Person]()
