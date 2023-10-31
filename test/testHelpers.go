@@ -89,15 +89,15 @@ type Pet struct {
 }
 
 type Owner struct {
-	Name  string         `json:"name"`
-	Age   int            `json:"age"`
-	Happy bool           `json:"happy"`
-	Pets  JSONArray[Pet] `json:"pets" gorm:"type:json"`
-	Pos   state.Pos      `gorm:"embedded"`
+	Name  string    `json:"name"`
+	Age   int       `json:"age"`
+	Happy bool      `json:"happy"`
+	Pets  []Pet     `json:"pets"`
+	Pos   state.Pos `json:"pos" gorm:"embedded"`
 }
 
 type PetCommunity struct {
-	Owners JSONArray[Owner] `gorm:"type:json"`
+	Owners JSONArray[Owner] `gorm:"serializer:json"`
 	Id     int              `gorm:"primaryKey;autoIncrement:false"`
 }
 
@@ -118,10 +118,12 @@ func (j JSONArray[T]) Value() (driver.Value, error) {
 	if len(j) == 0 {
 		return nil, nil
 	}
+
 	data, err := json.Marshal(j)
 	if err != nil {
 		return nil, err
 	}
+
 	return data, nil
 }
 
