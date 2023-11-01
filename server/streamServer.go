@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	ReadBufferSize  = 1024
-	WriteBufferSize = 1024
-	StreamInterval  = 100 * time.Millisecond
+	readBufferSize        = 1024
+	writeBufferSize       = 1024
+	defaultStreamInterval = 100 * time.Millisecond
 )
 
 type ConnectionType struct {
@@ -102,7 +102,7 @@ func NewStreamServer() *StreamServer {
 	s.ClientEventsQueue = make([]ClientEvent, 0)
 	s.PlayerIdToConnection = make(map[int]*websocket.Conn)
 	s.ProtoBufPacketsMutex = sync.Mutex{}
-	s.StreamInterval = int(StreamInterval)
+	s.StreamInterval = int(defaultStreamInterval)
 
 	return s
 }
@@ -117,8 +117,8 @@ func (s *StreamServer) SetSocketRequestRouter(router ISocketRequestRouter) {
 func (s *StreamServer) Start(ctx *EngineCtx) {
 
 	upgrader := websocket.Upgrader{
-		ReadBufferSize:  ReadBufferSize,
-		WriteBufferSize: WriteBufferSize,
+		ReadBufferSize:  readBufferSize,
+		WriteBufferSize: writeBufferSize,
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
@@ -204,7 +204,7 @@ type WSMessage struct {
 }
 
 func (ws *StreamServer) PublishMessage() {
-	ticker := time.NewTicker(StreamInterval)
+	ticker := time.NewTicker(defaultStreamInterval)
 	quit := make(chan struct{})
 
 	go func() {

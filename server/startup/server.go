@@ -1,13 +1,14 @@
 package startup
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/server/routes"
 	"github.com/curio-research/keystone/state"
 	"github.com/gin-gonic/gin"
-	"github.com/tjarratt/babble"
 )
 
 // Initialize new Keystone game engine
@@ -15,11 +16,9 @@ func NewGameEngine() *server.EngineCtx {
 
 	// Initialize http server
 	gin.SetMode(gin.ReleaseMode)
-
-	// TODO: set HTTP port
 	ginHttpServer := gin.Default()
 
-	// TODO: probably restore this
+	// TODO: make this modular in the future
 	ginHttpServer.Use(server.CORSMiddleware())
 
 	// Initialize new game tick (not started yet, no goroutines here)
@@ -30,7 +29,7 @@ func NewGameEngine() *server.EngineCtx {
 	server.RegisterDefaultTables(gameWorld)
 
 	// Create a random gameID
-	gameId := babble.NewBabbler().Babble()
+	gameId := randomString(8)
 
 	// Create a stream server
 	streamServer := server.NewStreamServer()
@@ -66,15 +65,21 @@ func RegisterGetStateRootHashEndpoint(ctx *server.EngineCtx) {
 	ctx.GinHttpEngine.POST("/stateRoot", routes.StateRootRouteHandler(ctx))
 }
 
-// TODO: move this into init
-// func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
+func randomString(length int) string {
+	// Define a character set from which to generate the random string
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// 	// initialize a websocket streaming server for both incoming and outgoing requests
-// 	streamServer, err := server.StartStreamServer(g, gameCtx, router, websocketPort)
-// 	if err != nil {
-// 		return err
-// 	}
+	// Seed the random number generator with the current time
+	rand.Seed(time.Now().UnixNano())
 
-// 	gameCtx.Stream = streamServer
-// 	return nil
-// }
+	// Create a byte slice to store the random string
+	result := make([]byte, length)
+
+	// Generate random characters and append them to the result slice
+	for i := 0; i < length; i++ {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+
+	// Convert the byte slice to a string and return it
+	return string(result)
+}
