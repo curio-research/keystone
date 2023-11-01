@@ -216,7 +216,7 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	}
 
 	updatePersonSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePersonRequest]) {
-		req := ctx.Req
+		req := ctx.Req.Data
 
 		person := personTable.Get(ctx.W, req.TargetEntity)
 		person.Position = req.NewPosition

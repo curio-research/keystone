@@ -84,7 +84,7 @@ func TestWorldNotUpdatedOnFailure_GeneralSystem(t *testing.T) {
 
 var TestPersonRequestSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testPersonRequests]) {
 	w := ctx.W
-	req := ctx.Req
+	req := ctx.Req.Data
 	playerID := int(req.GetIdentityPayload().playerID)
 
 	for _, person := range req.People {

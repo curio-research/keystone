@@ -309,7 +309,7 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
-	req := ctx.Req
+	req := ctx.Req.Data
 	w := ctx.W
 
 	playerID := int(req.GetIdentityPayload().GetPlayerId())
@@ -355,7 +355,7 @@ type testRemoveRequest struct {
 }
 
 var TestRemoveBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testRemoveRequest]) {
-	req := ctx.Req
+	req := ctx.Req.Data
 	w := ctx.GameCtx.World
 
 	bookFilter := Book{Author: req.Author, Title: req.Title, OwnerID: req.PlayerID}

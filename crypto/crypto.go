@@ -26,7 +26,6 @@ func SignMessageWithPrivateKey(privateKeyHex, message string) (string, error) {
 
 // verify signature with private key
 func VerifySignature(publicAddress, message, signatureHex string) (bool, error) {
-
 	signature, err := hexutil.Decode(signatureHex)
 	if err != nil {
 		fmt.Println("Error decoding signature:", err)

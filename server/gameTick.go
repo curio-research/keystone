@@ -67,11 +67,13 @@ type TransactionCtx[T any] struct {
 	W state.IWorld
 
 	// transaction request parameters
-	Req T
+	Req KeystoneRequest[T]
 
 	EventCtx *EventCtx
 
 	ErrorReturned bool
+
+	Meta map[string]any
 }
 
 type CMD uint32
@@ -123,11 +125,9 @@ func (ctx *TransactionCtx[T]) EmitError(errorMessage string, playerIds []int) {
 	ctx.ErrorReturned = true
 }
 
-type IMiddleware[T any] func(ctx *TransactionCtx[T], req T) bool // manually emit errors to the transaction context as needed using ctx.EmitError
-
 func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middlewareFunctions ...IMiddleware[T]) TickSystemFunction {
 	return func(ctx *EngineCtx) error {
-		transactionIds := GetSystemTransactionsOfType[T](ctx)
+		transactionIds := GetSystemTransactionsOfType[KeystoneRequest[T]](ctx)
 
 		for _, transactionId := range sort.IntSlice(transactionIds) {
 			// create a world to temporarily record ecs changes
@@ -146,12 +146,13 @@ func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middleware
 				W:        worldUpdateBuffer,
 				Req:      req,
 				EventCtx: eventCtx,
+				Meta:     map[string]any{},
 			}
 
 			callHandler := true
 			for _, middlewareFunc := range middlewareFunctions {
 				prevErrorCount := len(transactionCtx.GameCtx.ErrorLog)
-				ok := middlewareFunc(transactionCtx, req)
+				ok := middlewareFunc(transactionCtx)
 				if !ok {
 					callHandler = false
 					if len(eventCtx.ClientEvents) == prevErrorCount {
@@ -190,7 +191,6 @@ func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 			GameCtx:  ctx,
 			TxId:     -1,
 			W:        worldUpdateBuffer,
-			Req:      nil,
 			EventCtx: eventCtx,
 		}
 
@@ -278,7 +278,6 @@ func SerializeRequestToString[T any](req T) (string, error) {
 
 // get tick transactions
 func GetTickTransactionsOfType(w *state.GameWorld, transactionType string, tickNumber int) []int {
-
 	query := TransactionSchema{TickNumber: tickNumber, Type: transactionType}
 	queryFields := []string{"TickNumber", "Type"}
 
