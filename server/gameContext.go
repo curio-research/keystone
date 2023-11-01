@@ -144,7 +144,7 @@ func (ctx *EngineCtx) SetGameId(id string) {
 }
 
 // Add tables to world
-func (ctx *EngineCtx) AddTables(tables ...state.ITable) {
+func (ctx *EngineCtx) AddTables(tables map[interface{}]*state.TableBaseAccessor[any]) {
 	for _, table := range tables {
 		ctx.World.AddTable(table)
 	}
@@ -221,6 +221,24 @@ func (ctx *EngineCtx) Start() {
 	}
 
 	ctx.IsLive = true
+
+	// TODO: start HTTP server
+	// ctx.GinHttpEngine.Run(":" + "8080")
+
+	// addr := ":" + strconv.Itoa(8080)
+
+	// httpServer := &http.Server{
+	// 	Addr:    addr,
+	// 	Handler: ctx.GinHttpEngine,
+	// }
+
+	// go func() {
+	// 	err := httpServer.ListenAndServe()
+	// 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+	// 		t.Errorf("http server closed with unexpected error %v", err)
+	// 		return
+	// 	}
+	// }()
 
 	// TODO: start stream server
 	// TODO: start tick system

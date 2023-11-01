@@ -148,23 +148,18 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 }
 
 func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
-	// initiate an empty tick schedule
-	var tables []state.ITable
-	for _, accessor := range testSchemaToAccessors {
-		tables = append(tables, accessor)
-	}
 
 	ctx := startup.NewGameEngine()
 	ctx.SetGameId("test")
 	ctx.SetTickRate(20)
-	ctx.AddTables(tables...)
+	ctx.AddTables(testSchemaToAccessors)
+
+	ctx.SetEmitErrorHandler(&testErrorHandler{})
+	ctx.SetEmitEventHandler(&testBroadcastHandler{})
 
 	for _, system := range systems {
 		ctx.GameTick.Schedule.AddSystem(0, system)
 	}
-
-	ctx.SetEmitErrorHandler(&testErrorHandler{})
-	ctx.SetEmitEventHandler(&testBroadcastHandler{})
 
 	return ctx
 }

@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"testing"
 
@@ -22,9 +23,17 @@ func TestGetEntityValueAPI(t *testing.T) {
 
 	bookTable.AddSpecific(ctx.World, book1Entity, book1)
 
+	fmt.Println(1)
+
+	ctx.Start()
+
+	fmt.Println(2)
+
 	res := sendPostRequest(t, s, "entityValue", routes.GetEntityRequest{
 		Entity: book1Entity,
 	})
+
+	fmt.Println(3)
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {

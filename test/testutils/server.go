@@ -16,26 +16,21 @@ import (
 
 // TODO: refactor http to also be started inside here
 func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
-	gin.SetMode(gin.ReleaseMode)
-	s := gin.Default()
-	s.Use(server.CORSMiddleware())
-
-	tables := []state.ITable{}
-	for _, accessor := range schemaToTableAccessors {
-		tables = append(tables, accessor)
-	}
 
 	ctx := startup.NewGameEngine()
 	ctx.SetGameId("test")
 	ctx.SetTickRate(20)
-	ctx.AddTables(tables...)
+	ctx.AddTables(schemaToTableAccessors)
+
+	ctx.SetEmitErrorHandler(NewMockErrorHandler())
+
+	// TODO: add set http server
 
 	// initialize a websocket streaming server for both incoming and outgoing requests
-	err := startup.RegisterWSRoutes(ctx, s, SocketRequestRouter, websocketPort)
+	err := startup.RegisterWSRoutes(ctx, ctx.GinHttpEngine, SocketRequestRouter, websocketPort)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ctx.SetEmitErrorHandler(NewMockErrorHandler())
 
 	var db *sql.DB
 	if mode == server.Prod || mode == server.DevSQL {
@@ -57,7 +52,7 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 	startup.RegisterGetStateEndpoint(ctx)
 	startup.RegisterGetStateRootHashEndpoint(ctx)
 
-	return s, ctx, db, nil
+	return ctx.GinHttpEngine, ctx, db, nil
 }
 
 // message types
