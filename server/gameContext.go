@@ -182,6 +182,16 @@ func (ctx *EngineCtx) SetTickRate(tickRateMs int) {
 	ctx.GameTick.TickRateMs = tickRateMs
 }
 
+// Set websocket port
+func (ctx *EngineCtx) SetWebsocketPort(port int) {
+	ctx.Stream.Port = port
+}
+
+// Set websocket request router
+func (ctx *EngineCtx) SetSocketRequestRouter(router ISocketRequestRouter) {
+	ctx.Stream.SetSocketRequestRouter(router)
+}
+
 // Start Keystone game server
 func (ctx *EngineCtx) Start() {
 	color.HiYellow("")
@@ -235,11 +245,13 @@ func (ctx *EngineCtx) Start() {
 	// go func() {
 	// 	err := httpServer.ListenAndServe()
 	// 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-	// 		t.Errorf("http server closed with unexpected error %v", err)
+	// 		fmt.Errorf("http server closed with unexpected error %v", err)
 	// 		return
 	// 	}
 	// }()
 
 	// TODO: start stream server
+	ctx.Stream.StartStreamServer(ctx)
+
 	// TODO: start tick system
 }

@@ -16,6 +16,7 @@ func SetupWS(t *testing.T, port int) (*websocket.Conn, error) {
 	signal.Notify(interrupt, os.Interrupt)
 
 	portStr := strconv.Itoa(port)
+
 	u := url.URL{Scheme: "ws", Host: "localhost:" + portStr, Path: "/"}
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)

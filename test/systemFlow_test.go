@@ -277,20 +277,22 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 	return nil
 }
 
-// make the sql functions return the handlers
-// make a register function for each sql function
+// Start test server
 func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
-	port, wsPort := p.GetPort(), p.GetPort()
+	httpPort, wsPort := p.GetPort(), p.GetPort()
 
 	s, e, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
 	require.Nil(t, err)
 
-	addr := ":" + strconv.Itoa(port)
+	e.Start()
+
+	addr := ":" + strconv.Itoa(httpPort)
 	httpServer := &http.Server{
 		Addr:    addr,
 		Handler: s,
 	}
 
+	// spin up the HTTP server
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -299,8 +301,8 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 		}
 	}()
 
-	e.GameTick.Schedule.AddSystem(1, TestBookSystem)
-	e.GameTick.Schedule.AddSystem(1, TestRemoveBookSystem)
+	e.AddSystem(1, TestBookSystem)
+	e.AddSystem(1, TestRemoveBookSystem)
 
 	ws, err := testutils.SetupWS(t, wsPort)
 	require.Nil(t, err)

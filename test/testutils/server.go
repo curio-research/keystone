@@ -18,6 +18,7 @@ import (
 func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
 
 	ctx := startup.NewGameEngine()
+
 	ctx.SetGameId("test")
 	ctx.SetTickRate(20)
 	ctx.AddTables(schemaToTableAccessors)
@@ -26,11 +27,9 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 
 	// TODO: add set http server
 
-	// initialize a websocket streaming server for both incoming and outgoing requests
-	err := startup.RegisterWSRoutes(ctx, ctx.GinHttpEngine, SocketRequestRouter, websocketPort)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+	// Websocket handler
+	ctx.SetSocketRequestRouter(SocketRequestRouter)
+	ctx.SetWebsocketPort(websocketPort)
 
 	var db *sql.DB
 	if mode == server.Prod || mode == server.DevSQL {

@@ -20,7 +20,7 @@ func NewGameEngine() *server.EngineCtx {
 	ginHttpServer := gin.Default()
 
 	// TODO: probably restore this
-	// ginHttpServer.Use(server.CORSMiddleware())
+	ginHttpServer.Use(server.CORSMiddleware())
 
 	// Initialize new game tick (not started yet, no goroutines here)
 	gameTick := server.NewGameTick(server.DefaultTickRate)
@@ -32,6 +32,9 @@ func NewGameEngine() *server.EngineCtx {
 	// Create a random gameID
 	gameId := babble.NewBabbler().Babble()
 
+	// Create a stream server
+	streamServer := server.NewStreamServer()
+
 	// This is the master game context being passed around, containing pointers to everything
 	gameCtx := &server.EngineCtx{
 		GameId:                 gameId,
@@ -40,6 +43,7 @@ func NewGameEngine() *server.EngineCtx {
 		GameTick:               gameTick,
 		TransactionsToSaveLock: sync.Mutex{},
 		GinHttpEngine:          ginHttpServer,
+		Stream:                 streamServer,
 	}
 
 	return gameCtx
@@ -62,13 +66,14 @@ func RegisterGetStateRootHashEndpoint(ctx *server.EngineCtx) {
 }
 
 // TODO: move this into init
-func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
-	// initialize a websocket streaming server for both incoming and outgoing requests
-	streamServer, err := server.NewStreamServer(g, gameCtx, router, websocketPort)
-	if err != nil {
-		return err
-	}
+// func RegisterWSRoutes(gameCtx *server.EngineCtx, g *gin.Engine, router server.ISocketRequestRouter, websocketPort int) error {
 
-	gameCtx.Stream = streamServer
-	return nil
-}
+// 	// initialize a websocket streaming server for both incoming and outgoing requests
+// 	streamServer, err := server.StartStreamServer(g, gameCtx, router, websocketPort)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	gameCtx.Stream = streamServer
+// 	return nil
+// }

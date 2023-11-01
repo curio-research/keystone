@@ -23,12 +23,6 @@ func TestGetEntityValueAPI(t *testing.T) {
 
 	bookTable.AddSpecific(ctx.World, book1Entity, book1)
 
-	fmt.Println(1)
-
-	ctx.Start()
-
-	fmt.Println(2)
-
 	res := sendPostRequest(t, s, "entityValue", routes.GetEntityRequest{
 		Entity: book1Entity,
 	})
