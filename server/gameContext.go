@@ -3,8 +3,10 @@ package server
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/curio-research/keystone/state"
+	"github.com/fatih/color"
 )
 
 // ---------------------------------------
@@ -41,25 +43,23 @@ type EngineCtx struct {
 
 	SaveTransactionsHandler ISaveTransactions
 
-	// implementations on how to broadcast events and errors
+	// Implementations on how to broadcast events and errors
 	SystemErrorHandler     ISystemErrorHandler
 	SystemBroadcastHandler ISystemBroadcastHandler
 
 	// "dev", "prod"
 	Mode GameMode
 
-	// whether game should record error in error log
+	// Whether game should record error in error log
 	ShouldRecordError bool
 
-	// error log for printing when testing
+	// Error log for printing when testing
 	ErrorLog []ErrorLog
 
 	StateUpdatesMutex sync.Mutex
 
-	// state updates
+	// State updates
 	PendingStateUpdatesToSave []state.TableUpdate
-
-	RegisterTablesToWorldCb func(w *state.GameWorld)
 }
 
 // for debugging
@@ -131,4 +131,42 @@ func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
 	newTransactions := make([]TransactionSchema, len(transactions))
 	copy(newTransactions, transactions)
 	return newTransactions
+}
+
+// Set game ID
+func (ctx *EngineCtx) SetGameId(id string) {
+	ctx.GameId = id
+}
+
+// Add tables to world
+func (ctx *EngineCtx) AddTables(tables ...state.ITable) {
+	for _, table := range tables {
+		ctx.World.AddTable(table)
+	}
+}
+
+// Set save state handler
+func (ctx *EngineCtx) SetSaveStateHandler(saveStateHandler ISaveState, saveInterval time.Duration) {
+	ctx.SaveStateHandler = saveStateHandler
+	SetupSaveStateLoop(ctx, saveInterval)
+}
+
+// Set save transaction handler
+func (ctx *EngineCtx) SetSaveTxHandler(saveTxHandler ISaveTransactions, saveInterval time.Duration) {
+	ctx.SaveTransactionsHandler = saveTxHandler
+	SetupSaveTxLoop(ctx, saveInterval)
+}
+
+// Interval: how frequently a system ticks (in milliseconds)
+func (ctx *EngineCtx) AddSystem(IntervalMs int, tickFunction TickSystemFunction) {
+	ctx.GameTick.Schedule.AddSystem(IntervalMs, tickFunction)
+}
+
+func (ctx *EngineCtx) Start() {
+	color.HiYellow("")
+	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
+	fmt.Println()
+
+	ctx.IsLive = true
+
 }

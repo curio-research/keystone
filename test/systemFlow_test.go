@@ -299,8 +299,8 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 		}
 	}()
 
-	e.GameTick.Schedule.AddTickSystem(1, TestBookSystem)
-	e.GameTick.Schedule.AddTickSystem(1, TestRemoveBookSystem)
+	e.GameTick.Schedule.AddSystem(1, TestBookSystem)
+	e.GameTick.Schedule.AddSystem(1, TestRemoveBookSystem)
 
 	ws, err := testutils.SetupWS(t, wsPort)
 	require.Nil(t, err)

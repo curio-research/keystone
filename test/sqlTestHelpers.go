@@ -396,7 +396,7 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 	newGameEngine := func(t *testing.T, system server.TickSystemFunction, gameID string) *server.EngineCtx {
 		gameEngine := initializeTestWorld()
 
-		gameEngine.GameTick.Schedule.AddTickSystem(1, system)
+		gameEngine.GameTick.Schedule.AddSystem(1, system)
 		gameEngine.GameId = gameID
 
 		return gameEngine

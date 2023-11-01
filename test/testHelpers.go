@@ -156,7 +156,7 @@ func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx
 
 	ctx := startup.NewGameEngine("test", server.TickRate, tables...)
 	for _, system := range systems {
-		ctx.GameTick.Schedule.AddTickSystem(0, system)
+		ctx.GameTick.Schedule.AddSystem(0, system)
 	}
 
 	startup.RegisterErrorHandler(ctx, &testErrorHandler{})
