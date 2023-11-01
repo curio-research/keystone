@@ -1,9 +1,8 @@
 package server
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -209,6 +208,7 @@ func (ctx *EngineCtx) Start() {
 	fmt.Println()
 
 	color.HiWhite("Tick rate:         " + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
+	fmt.Println()
 
 	// TODO: change to log library
 
@@ -242,24 +242,12 @@ func (ctx *EngineCtx) Start() {
 
 	ctx.IsLive = true
 
-	// Start HTTP server
-	addr := ":" + strconv.Itoa(ctx.HttpPort)
-
-	httpServer := &http.Server{
-		Addr:    addr,
-		Handler: ctx.GinHttpEngine,
-	}
-
-	go func() {
-		err := httpServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			panic("http server closed with unexpected error %v " + err.Error())
-		}
-	}()
-
 	// Start stream server
 	ctx.Stream.Start(ctx)
 
 	// Start game tick system
 	ctx.GameTick.Start(ctx)
+
+	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
+
 }

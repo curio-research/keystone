@@ -2,7 +2,6 @@ package test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"testing"
 
@@ -26,8 +25,6 @@ func TestGetEntityValueAPI(t *testing.T) {
 	res := sendPostRequest(t, s, "entityValue", routes.GetEntityRequest{
 		Entity: book1Entity,
 	})
-
-	fmt.Println(3)
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
