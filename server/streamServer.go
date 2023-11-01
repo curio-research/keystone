@@ -114,7 +114,7 @@ func (s *StreamServer) SetSocketRequestRouter(router ISocketRequestRouter) {
 
 // Start websocket server
 // TODO: have this return an error?
-func (s *StreamServer) StartStreamServer(ctx *EngineCtx) {
+func (s *StreamServer) Start(ctx *EngineCtx) {
 
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  ReadBufferSize,

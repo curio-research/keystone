@@ -44,6 +44,7 @@ func NewGameEngine() *server.EngineCtx {
 		TransactionsToSaveLock: sync.Mutex{},
 		GinHttpEngine:          ginHttpServer,
 		Stream:                 streamServer,
+		HttpPort:               server.DefaultServerPort,
 	}
 
 	return gameCtx

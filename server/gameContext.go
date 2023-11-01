@@ -1,7 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -36,6 +38,9 @@ type EngineCtx struct {
 
 	// Gin HTTP server
 	GinHttpEngine *gin.Engine
+
+	// HTTP port
+	HttpPort int
 
 	// Transaction queue
 	TransactionsToSaveLock sync.Mutex
@@ -192,6 +197,11 @@ func (ctx *EngineCtx) SetSocketRequestRouter(router ISocketRequestRouter) {
 	ctx.Stream.SetSocketRequestRouter(router)
 }
 
+// Set HTTP port
+func (ctx *EngineCtx) SetPort(port int) {
+	ctx.HttpPort = port
+}
+
 // Start Keystone game server
 func (ctx *EngineCtx) Start() {
 	color.HiYellow("")
@@ -232,26 +242,24 @@ func (ctx *EngineCtx) Start() {
 
 	ctx.IsLive = true
 
-	// TODO: start HTTP server
-	// ctx.GinHttpEngine.Run(":" + "8080")
+	// Start HTTP server
+	addr := ":" + strconv.Itoa(ctx.HttpPort)
 
-	// addr := ":" + strconv.Itoa(8080)
+	httpServer := &http.Server{
+		Addr:    addr,
+		Handler: ctx.GinHttpEngine,
+	}
 
-	// httpServer := &http.Server{
-	// 	Addr:    addr,
-	// 	Handler: ctx.GinHttpEngine,
-	// }
+	go func() {
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic("http server closed with unexpected error %v " + err.Error())
+		}
+	}()
 
-	// go func() {
-	// 	err := httpServer.ListenAndServe()
-	// 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-	// 		fmt.Errorf("http server closed with unexpected error %v", err)
-	// 		return
-	// 	}
-	// }()
+	// Start stream server
+	ctx.Stream.Start(ctx)
 
-	// TODO: start stream server
-	ctx.Stream.StartStreamServer(ctx)
-
-	// TODO: start tick system
+	// Start game tick system
+	ctx.GameTick.Start(ctx)
 }
