@@ -4,14 +4,15 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
 )
 
 type RSAPublicKeyAuth struct {
-	Signature         []byte `json:"signature"`
-	Hash              []byte `json:"hash"`
+	Base64Signature   string `json:"signature"`
+	Base64Hash        string `json:"hash"`
 	PublicKeyModulus  string `json:"publicKeyModulus"`
 	PublicKeyExponent int    `json:"publicKeyExponent"`
 }
@@ -28,9 +29,12 @@ func NewRSAPublicKeyAuth[T any](privateKey *rsa.PrivateKey, req T) (*RSAPublicKe
 		return nil, err
 	}
 
+	base64Sig := base64.StdEncoding.EncodeToString(signature)
+	base64Hash := base64.StdEncoding.EncodeToString(hash[:])
+
 	return &RSAPublicKeyAuth{
-		Signature:         signature,
-		Hash:              hash[:],
+		Base64Signature:   base64Sig,
+		Base64Hash:        base64Hash,
 		PublicKeyModulus:  privateKey.PublicKey.N.String(),
 		PublicKeyExponent: privateKey.PublicKey.E,
 	}, nil
@@ -44,11 +48,23 @@ func (p RSAPublicKeyAuth) Verify() bool {
 		N: n,
 		E: p.PublicKeyExponent,
 	}
-	if p.Signature == nil || p.Hash == nil || pubKey.Equal(rsa.PublicKey{}) {
+	if p.Base64Signature == "" || p.Base64Hash == "" || pubKey.Equal(rsa.PublicKey{}) {
 		return false
 	}
 
-	err := rsa.VerifyPKCS1v15(&pubKey, crypto.SHA256, p.Hash, p.Signature)
+	hashBytes, err := base64.StdEncoding.DecodeString(p.Base64Hash)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+
+	sigBytes, err := base64.StdEncoding.DecodeString(p.Base64Signature)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+
+	err = rsa.VerifyPKCS1v15(&pubKey, crypto.SHA256, hashBytes, sigBytes)
 	if err != nil {
 		fmt.Println(err.Error())
 		return false
