@@ -281,11 +281,13 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
 	httpPort, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
+	s, ctx, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
 	require.Nil(t, err)
 
-	e.Start()
+	// e.Start()
+	ctx.Stream.Start(ctx)
 
+	// Serve HTTP server
 	addr := ":" + strconv.Itoa(httpPort)
 	httpServer := &http.Server{
 		Addr:    addr,
@@ -301,13 +303,13 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 		}
 	}()
 
-	e.AddSystem(1, TestBookSystem)
-	e.AddSystem(1, TestRemoveBookSystem)
+	ctx.AddSystem(1, TestBookSystem)
+	ctx.AddSystem(1, TestRemoveBookSystem)
 
 	ws, err := testutils.SetupWS(t, wsPort)
 	require.Nil(t, err)
 
-	return e, ws, httpServer, e.SystemErrorHandler.(*testutils.MockErrorHandler), db
+	return ctx, ws, httpServer, ctx.SystemErrorHandler.(*testutils.MockErrorHandler), db
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
