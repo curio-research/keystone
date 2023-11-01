@@ -2,11 +2,13 @@ package server
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/curio-research/keystone/state"
 	"github.com/fatih/color"
+	"github.com/gin-gonic/gin"
 )
 
 // ---------------------------------------
@@ -31,6 +33,9 @@ type EngineCtx struct {
 
 	// Stream server for broadcasting data such as table changes and errors to clients
 	Stream *StreamServer
+
+	// Gin HTTP server
+	GinHttpEngine *gin.Engine
 
 	// Transaction queue
 	TransactionsToSaveLock sync.Mutex
@@ -162,11 +167,61 @@ func (ctx *EngineCtx) AddSystem(IntervalMs int, tickFunction TickSystemFunction)
 	ctx.GameTick.Schedule.AddSystem(IntervalMs, tickFunction)
 }
 
+// Set broadcast event handler
+func (ctx *EngineCtx) SetEmitEventHandler(broadcastHandler ISystemBroadcastHandler) {
+	ctx.SystemBroadcastHandler = broadcastHandler
+}
+
+// Set broadcast error handler
+func (ctx *EngineCtx) SetEmitErrorHandler(errorHandler ISystemErrorHandler) {
+	ctx.SystemErrorHandler = errorHandler
+}
+
+// Set tick rate (milliseconds)
+func (ctx *EngineCtx) SetTickRate(tickRateMs int) {
+	ctx.GameTick.TickRateMs = tickRateMs
+}
+
+// Start Keystone game server
 func (ctx *EngineCtx) Start() {
 	color.HiYellow("")
 	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
 	fmt.Println()
 
+	color.HiWhite("Tick rate:         " + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
+
+	// TODO: change to log library
+
+	if ctx.SystemErrorHandler == nil {
+		fmt.Println("system error handler not provided")
+	}
+
+	if ctx.SystemBroadcastHandler == nil {
+		fmt.Println("system broadcast handler not provided")
+	}
+
+	if ctx.SaveTransactionsHandler == nil {
+		fmt.Println("save transactions handler not provided")
+	}
+
+	if ctx.SaveStateHandler == nil {
+		fmt.Println("save state handler not provided")
+	}
+
+	if ctx.Stream == nil {
+		fmt.Println("websocket routes not registered")
+	}
+
+	if len(ctx.World.Tables) == 0 {
+		fmt.Println("no tables registered")
+	}
+
+	if len(ctx.GameTick.Schedule.ScheduledTickSystems) == 0 {
+		fmt.Println("no tables registered")
+	}
+
 	ctx.IsLive = true
 
+	// TODO: start stream server
+	// TODO: start tick system
 }

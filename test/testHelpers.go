@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/startup"
+	"github.com/curio-research/keystone/server/startup"
 	"github.com/curio-research/keystone/state"
 	"github.com/curio-research/keystone/utils"
 )
@@ -154,13 +154,17 @@ func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx
 		tables = append(tables, accessor)
 	}
 
-	ctx := startup.NewGameEngine("test", server.TickRate, tables...)
+	ctx := startup.NewGameEngine()
+	ctx.SetGameId("test")
+	ctx.SetTickRate(20)
+	ctx.AddTables(tables...)
+
 	for _, system := range systems {
 		ctx.GameTick.Schedule.AddSystem(0, system)
 	}
 
-	startup.RegisterErrorHandler(ctx, &testErrorHandler{})
-	startup.RegisterBroadcastHandler(ctx, &testBroadcastHandler{})
+	ctx.SetEmitErrorHandler(&testErrorHandler{})
+	ctx.SetEmitEventHandler(&testBroadcastHandler{})
 
 	return ctx
 }
