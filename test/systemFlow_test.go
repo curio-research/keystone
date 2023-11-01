@@ -284,7 +284,9 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 	s, ctx, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
 	require.Nil(t, err)
 
-	// e.Start()
+	ctx.AddSystem(1, TestBookSystem)
+	ctx.AddSystem(1, TestRemoveBookSystem)
+
 	ctx.Stream.Start(ctx)
 
 	// Serve HTTP server
@@ -303,10 +305,7 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 		}
 	}()
 
-	ctx.AddSystem(1, TestBookSystem)
-	ctx.AddSystem(1, TestRemoveBookSystem)
-
-	ws, err := testutils.SetupWS(t, wsPort)
+	ws, err := testutils.EstablishWsConnection(t, wsPort)
 	require.Nil(t, err)
 
 	return ctx, ws, httpServer, ctx.SystemErrorHandler.(*testutils.MockErrorHandler), db
