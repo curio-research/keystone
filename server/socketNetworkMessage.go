@@ -104,6 +104,10 @@ func (msg *NetworkMessage) GetCommand() uint32 {
 	return msg.command
 }
 
+func (msg *NetworkMessage) GetData() []byte {
+	return msg.data
+}
+
 // Get Proto Message from Network Message
 func (msg NetworkMessage) GetProtoMessage(structData proto.Message) (proto.Message, error) {
 	if err := proto.Unmarshal(msg.data, structData); err != nil {

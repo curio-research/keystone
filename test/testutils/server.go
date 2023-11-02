@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"database/sql"
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -73,13 +74,13 @@ func SocketRequestRouter(ctx *server.EngineCtx, requestMsg *server.NetworkMessag
 	// route incoming data based on command routes
 	switch requestType {
 	case C2S_Test_MessageType: // No-op, only used in integration tests
-		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, server.KeystoneRequest[*pb_test.C2S_Test]{})
+		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, server.NewKeystoneRequest[*pb_test.C2S_Test](&pb_test.C2S_Test{}, nil))
 	}
 }
 
 // queue transactions for systems from the outside
 func queueTxIntoSystems[T proto.Message](ctx *server.EngineCtx, requestMsg *server.NetworkMessage, req server.KeystoneRequest[T]) T {
-	requestMsg.GetProtoMessage(req.Data)
+	json.Unmarshal(requestMsg.GetData(), &req)
 	requestId := requestMsg.Param()
 
 	server.QueueTxFromExternal(ctx, req, strconv.Itoa(int(requestId)))
