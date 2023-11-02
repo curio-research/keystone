@@ -1,1 +1,2 @@
 - Prettify server bootup
+- Support embedded arrays
