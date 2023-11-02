@@ -16,6 +16,8 @@ import (
 )
 
 func TestMySQLRewind(t *testing.T) {
+	testutils.SkipTestIfShort(t)
+
 	ctx, _, s, _, db := startTestServer(t, server.DevMySQL)
 	defer db.Close()
 
