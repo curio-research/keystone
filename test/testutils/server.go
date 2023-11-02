@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/curio-research/keystone/startup"
-
 	"github.com/curio-research/keystone/server"
+	"github.com/curio-research/keystone/server/startup"
 	"github.com/curio-research/keystone/state"
 	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
 	"github.com/gin-gonic/gin"
@@ -16,26 +15,22 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// TODO refactor http to also be started inside here
+// TODO: refactor http to also be started inside here
 func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTableAccessors map[interface{}]*state.TableBaseAccessor[any]) (*gin.Engine, *server.EngineCtx, *sql.DB, error) {
-	gin.SetMode(gin.ReleaseMode)
-	s := gin.Default()
-	s.Use(server.CORSMiddleware())
 
-	tables := []state.ITable{}
-	for _, accessor := range schemaToTableAccessors {
-		tables = append(tables, accessor)
-	}
+	ctx := startup.NewGameEngine()
 
-	tickRate := 20 // 20 ms
-	ctx := startup.NewGameEngine("test", tickRate, tables...)
+	ctx.SetGameId("test")
+	ctx.SetTickRate(20)
+	ctx.AddTables(schemaToTableAccessors)
 
-	// initialize a websocket streaming server for both incoming and outgoing requests
-	err := startup.RegisterWSRoutes(ctx, s, SocketRequestRouter, websocketPort)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	startup.RegisterErrorHandler(ctx, NewMockErrorHandler())
+	ctx.SetEmitErrorHandler(NewMockErrorHandler())
+
+	// TODO: add set http server
+
+	// Websocket handler
+	ctx.SetSocketRequestRouter(SocketRequestRouter)
+	ctx.SetWebsocketPort(websocketPort)
 
 	var db *sql.DB
 	if mode == server.Prod || mode == server.DevMySQL || mode == server.DevSQLite {
@@ -55,17 +50,17 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 			saveInterval = server.DevSaveStateInterval
 		}
 
-		startup.RegisterSaveStateHandler(ctx, saveStateHandler, saveInterval)
-		startup.RegisterSaveTxHandler(ctx, saveTxHandler, saveInterval)
-		startup.RegisterRewindEndpoint(ctx, s)
+		ctx.SetSaveStateHandler(saveStateHandler, saveInterval)
+		ctx.SetSaveTxHandler(saveTxHandler, saveInterval)
+		startup.RegisterRewindEndpoint(ctx)
 	}
 
 	// http api routes
-	startup.RegisterGetEntityValueEndpoint(ctx, s)
-	startup.RegisterGetStateEndpoint(ctx, s)
-	startup.RegisterGetStateRootHashEndpoint(ctx, s)
+	startup.RegisterGetEntityValueEndpoint(ctx)
+	startup.RegisterGetStateEndpoint(ctx)
+	startup.RegisterGetStateRootHashEndpoint(ctx)
 
-	return s, ctx, db, nil
+	return ctx.GinHttpEngine, ctx, db, nil
 }
 
 // message types
