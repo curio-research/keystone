@@ -37,7 +37,7 @@ func NewGameEngine() *server.EngineCtx {
 	// This is the master game context being passed around, containing pointers to everything
 	gameCtx := &server.EngineCtx{
 		GameId:                 gameId,
-		IsLive:                 true,
+		IsLive:                 false,
 		World:                  gameWorld,
 		GameTick:               gameTick,
 		TransactionsToSaveLock: sync.Mutex{},

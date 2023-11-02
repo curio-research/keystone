@@ -33,6 +33,8 @@ func TestSQLiteRewind(t *testing.T) {
 func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	testutils.SkipTestIfShort(t)
 
+	ctx.SetGameLiveliness(true)
+
 	player1Entity := testEntity1
 	book1Entity, book2Entity := testEntity2, testEntity3
 
