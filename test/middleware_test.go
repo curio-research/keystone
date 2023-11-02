@@ -1,12 +1,11 @@
 package test
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
 	"github.com/curio-research/keystone/server"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -57,7 +56,7 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 		Name: testName1,
 	})
 
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	privateKey, err := ethcrypto.GenerateKey()
 	require.Nil(t, err)
 
 	request := testPersonRequest{Val: Person{Name: testName2}, Entity: testEntity1}
