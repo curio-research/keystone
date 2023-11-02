@@ -1,11 +1,27 @@
 package test
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/startup"
 	"github.com/curio-research/keystone/state"
+	pb_test "github.com/curio-research/keystone/test/proto/pb.test"
+	"github.com/curio-research/keystone/test/testutils"
 	"github.com/curio-research/keystone/utils"
+	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/require"
+	"net/http"
+	"strconv"
+	"testing"
 )
+
+var p *testutils.PortManager
+
+func init() {
+	p = testutils.NewPortManager()
+}
 
 var (
 	// Person testing vars
@@ -183,3 +199,102 @@ func (t *testBroadcastHandler) BroadcastMessage(ctx *server.EngineCtx, clientEve
 		})
 	}
 }
+
+func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
+	port, wsPort := p.GetPort(), p.GetPort()
+
+	s, e, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
+	require.Nil(t, err)
+
+	addr := ":" + strconv.Itoa(port)
+	httpServer := &http.Server{
+		Addr:    addr,
+		Handler: s,
+	}
+
+	go func() {
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("http server closed with unexpected error %v", err)
+			return
+		}
+	}()
+
+	e.GameTick.Schedule.AddTickSystem(1, TestBookSystem)
+	e.GameTick.Schedule.AddTickSystem(1, TestRemoveBookSystem)
+
+	ws, err := testutils.SetupWS(t, wsPort)
+	require.Nil(t, err)
+
+	return e, ws, httpServer, e.SystemErrorHandler.(*testutils.MockErrorHandler), db
+}
+
+var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
+	req := ctx.Req.Data
+	w := ctx.W
+
+	playerID := int(req.GetIdentityPayload().GetPlayerId())
+
+	for _, bookInfo := range req.BookInfos {
+		switch bookInfo.Op {
+		case pb_test.Operation_Add:
+			bookTable.Add(w, Book{
+				Title:   bookInfo.Title,
+				Author:  bookInfo.Author,
+				OwnerID: playerID,
+			})
+		case pb_test.Operation_AddSpecific:
+			bookTable.AddSpecific(w, int(bookInfo.Entity), Book{
+				Title:   bookInfo.Title,
+				Author:  bookInfo.Author,
+				OwnerID: playerID,
+			})
+		case pb_test.Operation_Remove:
+			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, server.NewKeystoneRequest(testRemoveRequest{
+				Title:    bookInfo.Title,
+				Author:   bookInfo.Author,
+				PlayerID: playerID,
+			}, nil), "")
+		case pb_test.Operation_Update:
+			book := bookTable.Get(w, int(bookInfo.Entity))
+			if book.Title == "" {
+				ctx.EmitError(fmt.Sprintf("no book to update with entity %v", bookInfo.Entity), []int{playerID})
+				return
+			}
+
+			book.Title = bookInfo.Title
+			book.Author = bookInfo.Author
+			bookTable.Set(w, int(bookInfo.Entity), book)
+		}
+	}
+})
+
+type testRemoveRequest struct {
+	Author   string
+	Title    string
+	PlayerID int
+}
+
+var TestRemoveBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testRemoveRequest]) {
+	req := ctx.Req.Data
+	w := ctx.GameCtx.World
+
+	bookFilter := Book{Author: req.Author, Title: req.Title, OwnerID: req.PlayerID}
+	fieldNames := []string{"OwnerID"}
+	if req.Author == "" && req.Title == "" {
+		ctx.EmitError("author or title must be provided to remove a book", []int{req.PlayerID})
+		return
+	}
+
+	if req.Author != "" {
+		fieldNames = append(fieldNames, "Author")
+	}
+	if req.Title != "" {
+		fieldNames = append(fieldNames, "Title")
+	}
+
+	bookEntities := bookTable.Filter(w, bookFilter, fieldNames)
+	for _, e := range bookEntities {
+		bookTable.RemoveEntity(w, e)
+	}
+})
