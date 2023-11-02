@@ -38,13 +38,21 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 	startup.RegisterErrorHandler(ctx, NewMockErrorHandler())
 
 	var db *sql.DB
-	if mode == server.Prod || mode == server.DevSQL {
-		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+	if mode == server.Prod || mode == server.DevMySQL || mode == server.DevSQLite {
+		var saveStateHandler server.ISaveState
+		var saveTxHandler server.ISaveTransactions
+		var testDB *sql.DB
+
+		if mode == server.DevSQLite {
+			saveStateHandler, saveTxHandler, testDB = SetupSQLiteTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+		} else {
+			saveStateHandler, saveTxHandler, testDB = SetupMySQLTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+		}
 		db = testDB
 
 		saveInterval := server.SaveStateInterval
-		if mode == server.DevSQL {
-			saveInterval = server.DevSQLSaveStateInterval
+		if mode == server.DevMySQL || mode == server.DevSQLite {
+			saveInterval = server.DevSaveStateInterval
 		}
 
 		startup.RegisterSaveStateHandler(ctx, saveStateHandler, saveInterval)
