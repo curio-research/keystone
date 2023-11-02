@@ -264,10 +264,10 @@ func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) 
 }
 
 func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookInfo) error {
-	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, &pb_test.C2S_Test{
+	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, server.NewKeystoneRequest(&pb_test.C2S_Test{
 		BookInfos:       bookInfos,
 		IdentityPayload: testutils.CreateMockIdentityPayload(playerID),
-	})
+	}, nil))
 	if err != nil {
 		return err
 	}
@@ -329,11 +329,11 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 				OwnerID: playerID,
 			})
 		case pb_test.Operation_Remove:
-			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, testRemoveRequest{
+			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, server.NewKeystoneRequest(testRemoveRequest{
 				Title:    bookInfo.Title,
 				Author:   bookInfo.Author,
 				PlayerID: playerID,
-			}, "")
+			}, nil), "")
 		case pb_test.Operation_Update:
 			book := BookTable.Get(w, int(bookInfo.Entity))
 			if book.Title == "" {

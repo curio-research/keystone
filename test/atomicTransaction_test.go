@@ -48,7 +48,7 @@ func TestWorldNotUpdatedOnFailure_RequestSystem(t *testing.T) {
 		PlayerID: 6,
 	}
 
-	server.QueueTxAtTime(ctx.World, 1, req, "", true)
+	server.QueueTxAtTime(ctx.World, 1, server.NewKeystoneRequest(req, nil), "", true)
 	server.TickWorldForward(ctx, 1)
 
 	person1 := personTable.Get(ctx.World, 27)

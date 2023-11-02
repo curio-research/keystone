@@ -298,18 +298,18 @@ func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
 }
 
 // queue transactions that are internal (ex: move planning)
-func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data T, tickId string) error {
+func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data KeystoneRequest[T], tickId string) error {
 	return QueueTxAtTime(w, tickNumber, data, tickId, false)
 }
 
 // queue transactions that are user-initiated aka external
-func QueueTxFromExternal[T any](ctx *EngineCtx, data T, tickId string) error {
+func QueueTxFromExternal[T any](ctx *EngineCtx, data KeystoneRequest[T], tickId string) error {
 	nextTickId := ctx.GameTick.TickNumber + 1
 	return QueueTxAtTime(ctx.World, nextTickId, data, tickId, true)
 }
 
 // queues tick transactions to be executed in the future
-func QueueTxAtTime(w state.IWorld, tickNumber int, data interface{}, uuid string, isExternal bool) error {
+func QueueTxAtTime[T any](w state.IWorld, tickNumber int, data KeystoneRequest[T], uuid string, isExternal bool) error {
 	serializedStringData, err := SerializeRequestToString(data)
 	if err != nil {
 		return err
@@ -327,12 +327,6 @@ func QueueTxAtTime(w state.IWorld, tickNumber int, data interface{}, uuid string
 	})
 
 	return nil
-}
-
-// queue system tx at the next tick
-func QueueTransaction(ctx *EngineCtx, data interface{}, isExternal bool) error {
-	nextTickId := ctx.GameTick.TickNumber + 1
-	return QueueTxAtTime(ctx.World, nextTickId, data, "", isExternal)
 }
 
 func DeleteAllTicksAtTickNumber(w *state.GameWorld, tickNumber int) {
