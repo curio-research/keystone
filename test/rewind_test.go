@@ -15,11 +15,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRewind(t *testing.T) {
-	testutils.SkipTestIfShort(t)
-
-	ctx, _, s, _, db := startTestServer(t, server.DevSQL)
+func TestMySQLRewind(t *testing.T) {
+	ctx, _, s, _, db := startTestServer(t, server.DevMySQL)
 	defer db.Close()
+
+	coreRewindTest(t, ctx, s)
+}
+
+func TestSQLiteRewind(t *testing.T) {
+	ctx, _, s, _, db := startTestServer(t, server.DevSQLite)
+	defer db.Close()
+
+	coreRewindTest(t, ctx, s)
+	testutils.ResetSQLiteTestDB()
+}
+
+func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
+	testutils.SkipTestIfShort(t)
 
 	player1Entity := testEntity1
 	book1Entity, book2Entity := testEntity2, testEntity3
@@ -76,7 +88,7 @@ func TestRewind(t *testing.T) {
 	}, nil), "")
 	server.TickWorldForward(ctx, 35)
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 2)
 
 	resetWorldAndTick(ctx)
 	sendPostRequest(t, s, "rewindState", server.NewKeystoneRequest(server.RewindStateRequest{
