@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,10 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ---------------------------------------
-// context containing everything about the game server
-// ---------------------------------------
-
+// Context containing everything for the game server
 type EngineCtx struct {
 	// Unique game ID
 	GameId string
@@ -207,10 +205,25 @@ func (ctx *EngineCtx) Start() {
 	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
 	fmt.Println()
 
-	color.HiWhite("Tick rate:         " + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
-	fmt.Println()
+	color.HiWhite(padStringToLength("Tick rate", 20) + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
+
+	ctx.IsLive = true
+
+	// Start stream server
+	ctx.Stream.Start(ctx)
+
+	color.HiWhite(padStringToLength("Websocket port", 20) + strconv.Itoa(ctx.Stream.Port))
+
+	// Start game tick system
+	ctx.GameTick.Start(ctx)
+
+	color.HiWhite(padStringToLength("Http port", 20) + strconv.Itoa(ctx.HttpPort))
+
+	// warning messages
 
 	// TODO: change to log library
+
+	fmt.Println()
 
 	if ctx.SystemErrorHandler == nil {
 		fmt.Println("system error handler not provided")
@@ -240,14 +253,14 @@ func (ctx *EngineCtx) Start() {
 		fmt.Println("no tables registered")
 	}
 
-	ctx.IsLive = true
-
-	// Start stream server
-	ctx.Stream.Start(ctx)
-
-	// Start game tick system
-	ctx.GameTick.Start(ctx)
-
 	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
 
+}
+
+func padStringToLength(inputStr string, desiredLength int) string {
+	if len(inputStr) >= desiredLength {
+		return inputStr
+	}
+	padding := strings.Repeat(" ", desiredLength-len(inputStr))
+	return inputStr + padding
 }
