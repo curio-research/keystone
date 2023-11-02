@@ -37,7 +37,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	book1Entity, book2Entity := testEntity2, testEntity3
 
 	// second 1
-	server.QueueTxFromExternal(ctx, server.NewKeystoneRequest(&pb_test.C2S_Test{ // at tick 2
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{ // at tick 2
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_AddSpecific,
@@ -57,7 +57,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	server.TickWorldForward(ctx, 50) // 50 * 20 ms => 1s
 
 	// second 2
-	server.QueueTxFromExternal(ctx, server.NewKeystoneRequest(&pb_test.C2S_Test{
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_Update,
@@ -76,7 +76,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	}, nil), "")
 	server.TickWorldForward(ctx, 15)
 
-	server.QueueTxFromExternal(ctx, server.NewKeystoneRequest(&pb_test.C2S_Test{
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_Remove,
@@ -91,7 +91,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	time.Sleep(time.Second * 2)
 
 	resetWorldAndTick(ctx)
-	sendPostRequest(t, s, "rewindState", server.NewKeystoneRequest(server.RewindStateRequest{
+	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 1,
 		GameId:         testGameID1,
 	}, nil))
@@ -105,7 +105,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	assert.Equal(t, testBookAuthor2, book2.Author)
 
 	resetWorldAndTick(ctx)
-	sendPostRequest(t, s, "rewindState", server.NewKeystoneRequest(server.RewindStateRequest{
+	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 10,
 		GameId:         ctx.GameId,
 	}, nil))
@@ -118,7 +118,7 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	assert.Equal(t, testBookAuthor2, book2.Author)
 }
 
-func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data server.KeystoneRequest[T]) *http.Response {
+func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data server.KeystoneTx[T]) *http.Response {
 	httpServer := httptest.NewServer(s.Handler)
 
 	b, err := json.Marshal(data)

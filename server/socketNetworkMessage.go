@@ -27,7 +27,7 @@ func NewMessageFromBuffer(buffer []byte) *NetworkMessage {
 	return msg
 }
 
-func NewRequestMessage[T proto.Message](flag uint8, command uint32, param uint32, data KeystoneRequest[T]) (*NetworkMessage, error) {
+func NewRequestMessage[T proto.Message](flag uint8, command uint32, param uint32, data KeystoneTx[T]) (*NetworkMessage, error) {
 	msg := &NetworkMessage{}
 
 	msg.flag = flag

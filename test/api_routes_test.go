@@ -22,7 +22,7 @@ func TestGetEntityValueAPI(t *testing.T) {
 
 	bookTable.AddSpecific(ctx.World, book1Entity, book1)
 
-	res := sendPostRequest(t, s, "entityValue", server.NewKeystoneRequest(routes.GetEntityRequest{
+	res := sendPostRequest(t, s, "entityValue", server.NewKeystoneTx(routes.GetEntityRequest{
 		Entity: book1Entity,
 	}, nil))
 
@@ -48,7 +48,7 @@ func TestGetEntityValueAPI(t *testing.T) {
 	}
 
 	// test fetching an entity that doesn't exist
-	emptyRawResponse := sendPostRequest(t, s, "entityValue", server.NewKeystoneRequest(routes.GetEntityRequest{
+	emptyRawResponse := sendPostRequest(t, s, "entityValue", server.NewKeystoneTx(routes.GetEntityRequest{
 		Entity: 1000000000,
 	}, nil))
 
@@ -88,7 +88,7 @@ func TestCalculateStateRootAPI(t *testing.T) {
 	// calculate state root
 	root := state.CalculateWorldStateRootHash(ctx.World)
 
-	res := sendPostRequest(t, s, "stateRoot", server.NewKeystoneRequest(routes.StateRootRequest{}, nil))
+	res := sendPostRequest(t, s, "stateRoot", server.NewKeystoneTx(routes.StateRootRequest{}, nil))
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {

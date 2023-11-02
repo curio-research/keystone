@@ -3,7 +3,7 @@ package server
 import "github.com/gin-gonic/gin"
 
 func DecodeRequestBody[T any](c *gin.Context) (T, error) {
-	var res KeystoneRequest[T]
+	var res KeystoneTx[T]
 	if err := c.ShouldBindJSON(&res); err != nil {
 		return res.Data, err
 	}

@@ -34,7 +34,7 @@ func Test_PublicKeyAuth_RSA(t *testing.T) {
 	b, err := json.Marshal(publicKeyAuth)
 	require.Nil(t, err)
 
-	keystoneReq := server.NewKeystoneRequest(request, map[server.HeaderField]json.RawMessage{
+	keystoneReq := server.NewKeystoneTx(request, map[server.HeaderField]json.RawMessage{
 		server.RSAPublicKeyAuthHeader: b,
 	})
 
@@ -68,7 +68,7 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 	b, err := json.Marshal(publicKeyAuth)
 	require.Nil(t, err)
 
-	keystoneReq := server.NewKeystoneRequest(request, map[server.HeaderField]json.RawMessage{
+	keystoneReq := server.NewKeystoneTx(request, map[server.HeaderField]json.RawMessage{
 		server.ECDSAPublicKeyAuthHeader: b,
 	})
 

@@ -67,7 +67,7 @@ type TransactionCtx[T any] struct {
 	W state.IWorld
 
 	// transaction request parameters
-	Req KeystoneRequest[T]
+	Req KeystoneTx[T]
 
 	EventCtx *EventCtx
 
@@ -127,7 +127,7 @@ func (ctx *TransactionCtx[T]) EmitError(errorMessage string, playerIds []int) {
 
 func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middlewareFunctions ...IMiddleware[T]) TickSystemFunction {
 	return func(ctx *EngineCtx) error {
-		transactionIds := GetSystemTransactionsOfType[KeystoneRequest[T]](ctx)
+		transactionIds := GetSystemTransactionsOfType[KeystoneTx[T]](ctx)
 
 		for _, transactionId := range sort.IntSlice(transactionIds) {
 			// create a world to temporarily record ecs changes
@@ -299,18 +299,18 @@ func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
 }
 
 // queue transactions that are internal (ex: move planning)
-func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data KeystoneRequest[T], tickId string) error {
+func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data KeystoneTx[T], tickId string) error {
 	return QueueTxAtTime(w, tickNumber, data, tickId, false)
 }
 
 // queue transactions that are user-initiated aka external
-func QueueTxFromExternal[T any](ctx *EngineCtx, data KeystoneRequest[T], tickId string) error {
+func QueueTxFromExternal[T any](ctx *EngineCtx, data KeystoneTx[T], tickId string) error {
 	nextTickId := ctx.GameTick.TickNumber + 1
 	return QueueTxAtTime(ctx.World, nextTickId, data, tickId, true)
 }
 
 // queues tick transactions to be executed in the future
-func QueueTxAtTime[T any](w state.IWorld, tickNumber int, data KeystoneRequest[T], uuid string, isExternal bool) error {
+func QueueTxAtTime[T any](w state.IWorld, tickNumber int, data KeystoneTx[T], uuid string, isExternal bool) error {
 	serializedStringData, err := SerializeRequestToString(data)
 	if err != nil {
 		return err

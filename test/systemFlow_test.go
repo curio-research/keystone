@@ -252,7 +252,7 @@ func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) 
 }
 
 func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookInfo) error {
-	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, server.NewKeystoneRequest(&pb_test.C2S_Test{
+	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos:       bookInfos,
 		IdentityPayload: testutils.CreateMockIdentityPayload(playerID),
 	}, nil))

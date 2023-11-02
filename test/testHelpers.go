@@ -254,7 +254,7 @@ var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.Tran
 				OwnerID: playerID,
 			})
 		case pb_test.Operation_Remove:
-			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, server.NewKeystoneRequest(testRemoveRequest{
+			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, server.NewKeystoneTx(testRemoveRequest{
 				Title:    bookInfo.Title,
 				Author:   bookInfo.Author,
 				PlayerID: playerID,

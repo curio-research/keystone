@@ -14,13 +14,13 @@ const (
 )
 
 // wraps the headers
-type KeystoneRequest[T any] struct {
+type KeystoneTx[T any] struct {
 	Headers map[HeaderField]json.RawMessage
 	Data    T
 }
 
-func NewKeystoneRequest[T any](req T, headers map[HeaderField]json.RawMessage) KeystoneRequest[T] {
-	return KeystoneRequest[T]{
+func NewKeystoneTx[T any](req T, headers map[HeaderField]json.RawMessage) KeystoneTx[T] {
+	return KeystoneTx[T]{
 		Headers: headers,
 		Data:    req,
 	}

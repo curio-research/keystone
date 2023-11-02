@@ -235,11 +235,11 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	p1Pos2 := testPos4
 	p2Pos2 := testPos5
 
-	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneRequest(MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p1Entity,
 		NewPosition:  p1Pos2,
 	}, nil), "", true)
-	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneRequest(MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p2Entity,
 		NewPosition:  p2Pos2,
 	}, nil), "", true)
@@ -247,11 +247,11 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	// transactions for tick 3
 	p1Pos3 := testPos6
 	p3Pos2 := testPos7
-	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneRequest(MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p1Entity,
 		NewPosition:  p1Pos3,
 	}, nil), "", false) // to see that internal requests are not being added to diffs
-	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneRequest(MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p3Entity,
 		NewPosition:  p3Pos2,
 	}, nil), "", true)

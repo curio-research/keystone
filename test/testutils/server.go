@@ -77,12 +77,12 @@ func SocketRequestRouter(ctx *server.EngineCtx, requestMsg *server.NetworkMessag
 	// route incoming data based on command routes
 	switch requestType {
 	case C2S_Test_MessageType: // No-op, only used in integration tests
-		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, server.NewKeystoneRequest[*pb_test.C2S_Test](&pb_test.C2S_Test{}, nil))
+		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, server.NewKeystoneTx[*pb_test.C2S_Test](&pb_test.C2S_Test{}, nil))
 	}
 }
 
 // queue transactions for systems from the outside
-func queueTxIntoSystems[T proto.Message](ctx *server.EngineCtx, requestMsg *server.NetworkMessage, req server.KeystoneRequest[T]) T {
+func queueTxIntoSystems[T proto.Message](ctx *server.EngineCtx, requestMsg *server.NetworkMessage, req server.KeystoneTx[T]) T {
 	json.Unmarshal(requestMsg.GetData(), &req)
 	requestId := requestMsg.Param()
 

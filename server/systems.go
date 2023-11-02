@@ -43,10 +43,10 @@ func CreateRequestForTick[T any](ctx *EngineCtx) gin.HandlerFunc {
 }
 
 // decode a string
-func DecodeTxData[T any](ctx *EngineCtx, transactionId int) KeystoneRequest[T] {
+func DecodeTxData[T any](ctx *EngineCtx, transactionId int) KeystoneTx[T] {
 	transaction := TransactionTable.Get(ctx.World, transactionId)
 
-	var req KeystoneRequest[T]
+	var req KeystoneTx[T]
 	json.Unmarshal([]byte(transaction.Data), &req)
 
 	return req
