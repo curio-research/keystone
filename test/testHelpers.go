@@ -199,18 +199,26 @@ func (t *testBroadcastHandler) BroadcastMessage(ctx *server.EngineCtx, clientEve
 	}
 }
 
+// Start test server
 func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
-	port, wsPort := p.GetPort(), p.GetPort()
+	httpPort, wsPort := p.GetPort(), p.GetPort()
 
-	s, e, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
+	s, ctx, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
 	require.Nil(t, err)
 
-	addr := ":" + strconv.Itoa(port)
+	ctx.AddSystem(1, TestBookSystem)
+	ctx.AddSystem(1, TestRemoveBookSystem)
+
+	ctx.Stream.Start(ctx)
+
+	// Serve HTTP server
+	addr := ":" + strconv.Itoa(httpPort)
 	httpServer := &http.Server{
 		Addr:    addr,
 		Handler: s,
 	}
 
+	// spin up the HTTP server
 	go func() {
 		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -219,13 +227,10 @@ func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *we
 		}
 	}()
 
-	e.GameTick.Schedule.AddTickSystem(1, TestBookSystem)
-	e.GameTick.Schedule.AddTickSystem(1, TestRemoveBookSystem)
-
-	ws, err := testutils.SetupWS(t, wsPort)
+	ws, err := testutils.EstablishWsConnection(t, wsPort)
 	require.Nil(t, err)
 
-	return e, ws, httpServer, e.SystemErrorHandler.(*testutils.MockErrorHandler), db
+	return ctx, ws, httpServer, ctx.SystemErrorHandler.(*testutils.MockErrorHandler), db
 }
 
 var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
