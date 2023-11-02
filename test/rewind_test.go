@@ -15,17 +15,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRewind(t *testing.T) {
+func TestMySQLRewind(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	ctx, _, s, _, db := startTestServer(t, server.DevSQL)
+	ctx, _, s, _, db := startTestServer(t, server.DevMySQL)
 	defer db.Close()
+
+	coreRewindTest(t, ctx, s)
+}
+
+func TestSQLiteRewind(t *testing.T) {
+	ctx, _, s, _, db := startTestServer(t, server.DevSQLite)
+	defer db.Close()
+
+	coreRewindTest(t, ctx, s)
+	testutils.ResetSQLiteTestDB()
+}
+
+func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
+	testutils.SkipTestIfShort(t)
+
+	ctx.SetGameLiveliness(true)
 
 	player1Entity := testEntity1
 	book1Entity, book2Entity := testEntity2, testEntity3
 
 	// second 1
-	server.QueueTxFromExternal(ctx, &pb_test.C2S_Test{ // at tick 2
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{ // at tick 2
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_AddSpecific,
@@ -41,11 +57,11 @@ func TestRewind(t *testing.T) {
 			},
 		},
 		IdentityPayload: testutils.CreateMockIdentityPayload(player1Entity),
-	}, "")
+	}, nil), "")
 	server.TickWorldForward(ctx, 50) // 50 * 20 ms => 1s
 
 	// second 2
-	server.QueueTxFromExternal(ctx, &pb_test.C2S_Test{
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_Update,
@@ -61,10 +77,10 @@ func TestRewind(t *testing.T) {
 			},
 		},
 		IdentityPayload: testutils.CreateMockIdentityPayload(player1Entity),
-	}, "")
+	}, nil), "")
 	server.TickWorldForward(ctx, 15)
 
-	server.QueueTxFromExternal(ctx, &pb_test.C2S_Test{
+	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos: []*pb_test.TestBookInfo{
 			{
 				Op:     pb_test.Operation_Remove,
@@ -73,16 +89,16 @@ func TestRewind(t *testing.T) {
 			},
 		},
 		IdentityPayload: testutils.CreateMockIdentityPayload(player1Entity),
-	}, "")
+	}, nil), "")
 	server.TickWorldForward(ctx, 35)
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 2)
 
 	resetWorldAndTick(ctx)
-	sendPostRequest(t, s, "rewindState", server.RewindStateRequest{
+	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 1,
 		GameId:         testGameID1,
-	})
+	}, nil))
 
 	book1 := bookTable.Get(ctx.World, book1Entity)
 	assert.Equal(t, testBookTitle1, book1.Title)
@@ -93,10 +109,10 @@ func TestRewind(t *testing.T) {
 	assert.Equal(t, testBookAuthor2, book2.Author)
 
 	resetWorldAndTick(ctx)
-	sendPostRequest(t, s, "rewindState", server.RewindStateRequest{
+	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 10,
 		GameId:         ctx.GameId,
-	})
+	}, nil))
 
 	book1 = bookTable.Get(ctx.World, book1Entity)
 	assert.Equal(t, 0, book1.Id)
@@ -106,7 +122,7 @@ func TestRewind(t *testing.T) {
 	assert.Equal(t, testBookAuthor2, book2.Author)
 }
 
-func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data T) *http.Response {
+func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data server.KeystoneTx[T]) *http.Response {
 	httpServer := httptest.NewServer(s.Handler)
 
 	b, err := json.Marshal(data)

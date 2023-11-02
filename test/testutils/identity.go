@@ -12,7 +12,7 @@ type IVerifyIdentity interface {
 
 // verifies that a request has a valid jwt identity payload
 func VerifyIdentity[T IVerifyIdentity]() server.IMiddleware[T] {
-	return func(ctx *server.TransactionCtx[T], req T) bool {
+	return func(ctx *server.TransactionCtx[T]) bool {
 		// playerId, verified := identity.VerifyIdentity(ctx.GameCtx, req.GetIdentityPayload())
 		// if !verified {
 		// 	ctx.EmitError(constants.IdentityVerificationErrorString, []int{playerId})

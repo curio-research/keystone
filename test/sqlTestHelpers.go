@@ -216,7 +216,7 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	}
 
 	updatePersonSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePersonRequest]) {
-		req := ctx.Req
+		req := ctx.Req.Data
 
 		person := personTable.Get(ctx.W, req.TargetEntity)
 		person.Position = req.NewPosition
@@ -235,26 +235,26 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	p1Pos2 := testPos4
 	p2Pos2 := testPos5
 
-	server.QueueTxAtTime(initialGameWorld, 2, MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p1Entity,
 		NewPosition:  p1Pos2,
-	}, "", true)
-	server.QueueTxAtTime(initialGameWorld, 2, MovePersonRequest{
+	}, nil), "", true)
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p2Entity,
 		NewPosition:  p2Pos2,
-	}, "", true)
+	}, nil), "", true)
 
 	// transactions for tick 3
 	p1Pos3 := testPos6
 	p3Pos2 := testPos7
-	server.QueueTxAtTime(initialGameWorld, 3, MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p1Entity,
 		NewPosition:  p1Pos3,
-	}, "", false) // to see that internal requests are not being added to diffs
-	server.QueueTxAtTime(initialGameWorld, 3, MovePersonRequest{
+	}, nil), "", false) // to see that internal requests are not being added to diffs
+	server.QueueTxAtTime(initialGameWorld, 3, server.NewKeystoneTx(MovePersonRequest{
 		TargetEntity: p3Entity,
 		NewPosition:  p3Pos2,
-	}, "", true)
+	}, nil), "", true)
 
 	// apply transactions to the world
 	server.TickWorldForward(initialGameEngine, 3)

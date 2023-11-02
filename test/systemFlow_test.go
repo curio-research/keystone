@@ -1,11 +1,7 @@
 package test
 
 import (
-	"database/sql"
-	"errors"
-	"fmt"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
 
@@ -17,14 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var BookTable = state.NewTableAccessor[Book]()
-
-var p *testutils.PortManager
-
-func init() {
-	p = testutils.NewPortManager()
-}
 
 func TestAddBook(t *testing.T) {
 	e, ws, s, _, _ := startTestServer(t, server.Dev)
@@ -60,25 +48,25 @@ func TestAddBook(t *testing.T) {
 
 	server.TickWorldForward(e, 2)
 
-	b1 := BookTable.Get(w, specificBookEntity)
+	b1 := bookTable.Get(w, specificBookEntity)
 	assert.Equal(t, testBookTitle1, b1.Title)
 	assert.Equal(t, testBookAuthor1, b1.Author)
 	assert.Equal(t, playerID, b1.OwnerID)
 	assert.Equal(t, specificBookEntity, b1.Id)
 
-	b2 := BookTable.Filter(w, Book{
+	b2 := bookTable.Filter(w, Book{
 		Title:  testBookTitle2,
 		Author: testBookAuthor2,
 	}, []string{"Title", "Author"})
 	require.Len(t, b2, 1)
-	assert.Equal(t, playerID, BookTable.Get(w, b2[0]).OwnerID)
+	assert.Equal(t, playerID, bookTable.Get(w, b2[0]).OwnerID)
 
-	b3 := BookTable.Filter(w, Book{
+	b3 := bookTable.Filter(w, Book{
 		Title:  testBookTitle3,
 		Author: testBookAuthor3,
 	}, []string{"Title", "Author"})
 	require.Len(t, b3, 1)
-	assert.Equal(t, player2ID, BookTable.Get(w, b3[0]).OwnerID)
+	assert.Equal(t, player2ID, bookTable.Get(w, b3[0]).OwnerID)
 }
 
 func tearDown(ws *websocket.Conn, server *http.Server) {
@@ -121,11 +109,11 @@ func TestUpdate(t *testing.T) {
 	require.Equal(t, mockErrorHandler.ErrorCount(), 1)
 	assert.Equal(t, "no book to update with entity 0", mockErrorHandler.LastError())
 
-	b1 := BookTable.Get(w, b1Entity)
+	b1 := bookTable.Get(w, b1Entity)
 	assert.Equal(t, testBookTitle1, b1.Title)
 	assert.Equal(t, testBookAuthor1, b1.Author)
 
-	b2 := BookTable.Get(w, b2Entity)
+	b2 := bookTable.Get(w, b2Entity)
 	assert.Equal(t, testBookTitle2, b2.Title)
 	assert.Equal(t, testBookAuthor2, b2.Author)
 
@@ -144,11 +132,11 @@ func TestUpdate(t *testing.T) {
 
 	server.TickWorldForward(e, 2)
 
-	b1 = BookTable.Get(w, b1Entity)
+	b1 = bookTable.Get(w, b1Entity)
 	assert.Equal(t, testBookTitle1, b1.Title)
 	assert.Equal(t, testBookAuthor3, b1.Author)
 
-	b2 = BookTable.Get(w, b2Entity)
+	b2 = bookTable.Get(w, b2Entity)
 	assert.Equal(t, testBookTitle3, b2.Title)
 	assert.Equal(t, testBookAuthor2, b2.Author)
 }
@@ -229,7 +217,7 @@ func TestDeleteAndFilter(t *testing.T) {
 			}
 
 			for i := 1; i <= 5; i++ {
-				book := BookTable.Get(w, i)
+				book := bookTable.Get(w, i)
 				if _, ok := m[i]; ok {
 					assert.NotEqual(t, "", book.Title)
 				} else {
@@ -248,7 +236,7 @@ func TestDeleteAndFilter(t *testing.T) {
 }
 
 func addBook(w state.IWorld, title, author string, ownerID int, entity int) int {
-	return BookTable.AddSpecific(w, entity, Book{
+	return bookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
 		OwnerID: ownerID,
@@ -256,7 +244,7 @@ func addBook(w state.IWorld, title, author string, ownerID int, entity int) int 
 }
 
 func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) int {
-	return BookTable.AddSpecific(w, entity, Book{
+	return bookTable.AddSpecific(w, entity, Book{
 		Title:   title,
 		Author:  author,
 		OwnerID: ownerID,
@@ -264,10 +252,10 @@ func addBookSpecific(w state.IWorld, title, author string, ownerID, entity int) 
 }
 
 func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookInfo) error {
-	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, &pb_test.C2S_Test{
+	err := testutils.SendMessage(ws, testutils.C2S_Test_MessageType, server.NewKeystoneTx(&pb_test.C2S_Test{
 		BookInfos:       bookInfos,
 		IdentityPayload: testutils.CreateMockIdentityPayload(playerID),
-	})
+	}, nil))
 	if err != nil {
 		return err
 	}
@@ -276,107 +264,3 @@ func sendWSMsg(ws *websocket.Conn, playerID int, bookInfos ...*pb_test.TestBookI
 
 	return nil
 }
-
-// Start test server
-func startTestServer(t *testing.T, mode server.GameMode) (*server.EngineCtx, *websocket.Conn, *http.Server, *testutils.MockErrorHandler, *sql.DB) {
-	httpPort, wsPort := p.GetPort(), p.GetPort()
-
-	s, ctx, db, err := testutils.Server(t, mode, wsPort, testSchemaToAccessors)
-	require.Nil(t, err)
-
-	ctx.AddSystem(1, TestBookSystem)
-	ctx.AddSystem(1, TestRemoveBookSystem)
-
-	ctx.Stream.Start(ctx)
-
-	// Serve HTTP server
-	addr := ":" + strconv.Itoa(httpPort)
-	httpServer := &http.Server{
-		Addr:    addr,
-		Handler: s,
-	}
-
-	// spin up the HTTP server
-	go func() {
-		err := httpServer.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			t.Errorf("http server closed with unexpected error %v", err)
-			return
-		}
-	}()
-
-	ws, err := testutils.EstablishWsConnection(t, wsPort)
-	require.Nil(t, err)
-
-	return ctx, ws, httpServer, ctx.SystemErrorHandler.(*testutils.MockErrorHandler), db
-}
-
-var TestBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[*pb_test.C2S_Test]) {
-	req := ctx.Req
-	w := ctx.W
-
-	playerID := int(req.GetIdentityPayload().GetPlayerId())
-
-	for _, bookInfo := range req.BookInfos {
-		switch bookInfo.Op {
-		case pb_test.Operation_Add:
-			BookTable.Add(w, Book{
-				Title:   bookInfo.Title,
-				Author:  bookInfo.Author,
-				OwnerID: playerID,
-			})
-		case pb_test.Operation_AddSpecific:
-			BookTable.AddSpecific(w, int(bookInfo.Entity), Book{
-				Title:   bookInfo.Title,
-				Author:  bookInfo.Author,
-				OwnerID: playerID,
-			})
-		case pb_test.Operation_Remove:
-			server.QueueTxFromInternal(w, ctx.GameCtx.GameTick.TickNumber+1, testRemoveRequest{
-				Title:    bookInfo.Title,
-				Author:   bookInfo.Author,
-				PlayerID: playerID,
-			}, "")
-		case pb_test.Operation_Update:
-			book := BookTable.Get(w, int(bookInfo.Entity))
-			if book.Title == "" {
-				ctx.EmitError(fmt.Sprintf("no book to update with entity %v", bookInfo.Entity), []int{playerID})
-				return
-			}
-
-			book.Title = bookInfo.Title
-			book.Author = bookInfo.Author
-			BookTable.Set(w, int(bookInfo.Entity), book)
-		}
-	}
-})
-
-type testRemoveRequest struct {
-	Author   string
-	Title    string
-	PlayerID int
-}
-
-var TestRemoveBookSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testRemoveRequest]) {
-	req := ctx.Req
-	w := ctx.GameCtx.World
-
-	bookFilter := Book{Author: req.Author, Title: req.Title, OwnerID: req.PlayerID}
-	fieldNames := []string{"OwnerID"}
-	if req.Author == "" && req.Title == "" {
-		ctx.EmitError("author or title must be provided to remove a book", []int{req.PlayerID})
-		return
-	}
-
-	if req.Author != "" {
-		fieldNames = append(fieldNames, "Author")
-	}
-	if req.Title != "" {
-		fieldNames = append(fieldNames, "Title")
-	}
-
-	bookEntities := BookTable.Filter(w, bookFilter, fieldNames)
-	for _, e := range bookEntities {
-		BookTable.RemoveEntity(w, e)
-	}
-})

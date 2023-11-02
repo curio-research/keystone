@@ -3,12 +3,12 @@ package server
 import "github.com/gin-gonic/gin"
 
 func DecodeRequestBody[T any](c *gin.Context) (T, error) {
-	var res T
+	var res KeystoneTx[T]
 	if err := c.ShouldBindJSON(&res); err != nil {
-		return res, err
+		return res.Data, err
 	}
 
-	return res, nil
+	return res.Data, nil
 }
 
 func CreateBasicResponseObject(requestUuid string) interface{} {

@@ -5,14 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/curio-research/keystone/db"
-	gamedb "github.com/curio-research/keystone/db"
 	"github.com/curio-research/keystone/test/testutils"
 
-	"github.com/curio-research/keystone/state"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 )
 
 var sqlDSN string
@@ -20,7 +16,7 @@ var sqlDSN string
 func TestMySQLSaveStateHandler(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	handler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+	handler, _, db := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	coreTestSaveStateHandler(t, handler)
@@ -29,7 +25,7 @@ func TestMySQLSaveStateHandler(t *testing.T) {
 func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	coreTestSaveStateRemovalHandler(t, mySQLStateHandler)
@@ -38,7 +34,7 @@ func TestMySQLSaveStateHandler_Removal(t *testing.T) {
 func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	mySQLStateHandler, _, db := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+	mySQLStateHandler, _, db := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
 	defer db.Close()
 
 	coreTestSaveStateWithNestedStructsHandler(t, mySQLStateHandler)
@@ -47,7 +43,7 @@ func TestMySQLSaveStateHandler_NestedStructs(t *testing.T) {
 func TestMySQLRestoreStateFromTxs(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	_, mySQLTxHandler, db := setupMySQLTestDB(t, testGameID2, true, testSchemaToAccessors)
+	_, mySQLTxHandler, db := testutils.SetupMySQLTestDB(t, testGameID2, true, testSchemaToAccessors)
 	defer db.Close()
 
 	coreTestRestoreStateFromTransactionsHandler(t, mySQLTxHandler)
@@ -57,8 +53,8 @@ func TestMySQLRestoreStateFromTxs(t *testing.T) {
 func TestMySQLMultipleGames_SaveState(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
+	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 
 	coreTestMultipleGamesSaveState(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
 }
@@ -66,29 +62,10 @@ func TestMySQLMultipleGames_SaveState(t *testing.T) {
 func TestMultipleGames_SaveTx(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
-	saveStateHandler1, saveTxHandler1, db1 := setupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
-	saveStateHandler2, saveTxHandler2, db2 := setupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
+	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)
+	saveStateHandler2, saveTxHandler2, db2 := testutils.SetupMySQLTestDB(t, testGameID2, false, testSchemaToAccessors)
 
 	coreTestMultipleGamesSaveTransactions(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
-}
-
-func setupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*db.MySQLSaveStateHandler, *db.MySQLSaveTransactionHandler, *sql.DB) {
-	var db *sql.DB
-	db, err := sql.Open("txdb", sqlDSN)
-	if err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, db.Ping())
-
-	if deleteTables {
-		deleteAllTables(t, db)
-	}
-
-	sqlDialector := mysql.New(mysql.Config{Conn: db})
-	mySQLSaveStateHandler, mySQLSaveTxHandler, err := gamedb.SQLHandlersFromDialector(sqlDialector, testGameID, accessors)
-	require.Nil(t, err)
-
-	return mySQLSaveStateHandler, mySQLSaveTxHandler, db
 }
 
 func deleteAllTables(t *testing.T, db *sql.DB) {

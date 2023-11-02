@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"log"
 
 	"google.golang.org/protobuf/proto"
@@ -24,6 +25,25 @@ func NewMessageFromBuffer(buffer []byte) *NetworkMessage {
 	msg.ParseFromBuffer(buffer)
 
 	return msg
+}
+
+func NewRequestMessage[T proto.Message](flag uint8, command uint32, param uint32, data KeystoneTx[T]) (*NetworkMessage, error) {
+	msg := &NetworkMessage{}
+
+	msg.flag = flag
+	msg.command = command
+	msg.param = param
+
+	out, err := json.Marshal(data)
+
+	if err != nil {
+		log.Printf("Failed to marshal protobuf: %v", err)
+		return nil, err
+	}
+
+	msg.data = out
+
+	return msg, nil
 }
 
 func NewMessage(flag uint8, command uint32, param uint32, data proto.Message) (*NetworkMessage, error) {
@@ -82,6 +102,10 @@ func (msg *NetworkMessage) ParseToBuffer() []byte {
 
 func (msg *NetworkMessage) GetCommand() uint32 {
 	return msg.command
+}
+
+func (msg *NetworkMessage) GetData() []byte {
+	return msg.data
 }
 
 // Get Proto Message from Network Message

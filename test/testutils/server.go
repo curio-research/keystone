@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"database/sql"
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -32,13 +33,21 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 	ctx.SetWebsocketPort(websocketPort)
 
 	var db *sql.DB
-	if mode == server.Prod || mode == server.DevSQL {
-		saveStateHandler, saveTxHandler, testDB := SetupTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+	if mode == server.Prod || mode == server.DevMySQL || mode == server.DevSQLite {
+		var saveStateHandler server.ISaveState
+		var saveTxHandler server.ISaveTransactions
+		var testDB *sql.DB
+
+		if mode == server.DevSQLite {
+			saveStateHandler, saveTxHandler, testDB = SetupSQLiteTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+		} else {
+			saveStateHandler, saveTxHandler, testDB = SetupMySQLTestDB(t, ctx.GameId, true, schemaToTableAccessors)
+		}
 		db = testDB
 
 		saveInterval := server.SaveStateInterval
-		if mode == server.DevSQL {
-			saveInterval = server.DevSQLSaveStateInterval
+		if mode == server.DevMySQL || mode == server.DevSQLite {
+			saveInterval = server.DevSaveStateInterval
 		}
 
 		ctx.SetSaveStateHandler(saveStateHandler, saveInterval)
@@ -68,15 +77,15 @@ func SocketRequestRouter(ctx *server.EngineCtx, requestMsg *server.NetworkMessag
 	// route incoming data based on command routes
 	switch requestType {
 	case C2S_Test_MessageType: // No-op, only used in integration tests
-		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, &pb_test.C2S_Test{})
+		queueTxIntoSystems[*pb_test.C2S_Test](ctx, requestMsg, server.NewKeystoneTx[*pb_test.C2S_Test](&pb_test.C2S_Test{}, nil))
 	}
 }
 
 // queue transactions for systems from the outside
-func queueTxIntoSystems[T proto.Message](ctx *server.EngineCtx, requestMsg *server.NetworkMessage, req T) T {
-	requestMsg.GetProtoMessage(req)
+func queueTxIntoSystems[T proto.Message](ctx *server.EngineCtx, requestMsg *server.NetworkMessage, req server.KeystoneTx[T]) T {
+	json.Unmarshal(requestMsg.GetData(), &req)
 	requestId := requestMsg.Param()
 
 	server.QueueTxFromExternal(ctx, req, strconv.Itoa(int(requestId)))
-	return req
+	return req.Data
 }
