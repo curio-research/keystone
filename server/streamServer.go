@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	ReadBufferSize  = 1024
-	WriteBufferSize = 1024
-	StreamInterval  = 100 * time.Millisecond
+	readBufferSize        = 1024
+	writeBufferSize       = 1024
+	defaultStreamInterval = 100 * time.Millisecond
 )
 
 type ConnectionType struct {
@@ -24,24 +24,32 @@ type ConnectionType struct {
 }
 
 type StreamServer struct {
-	// lock for protobuf packets
+	// Websocket port
+	Port int
+
+	// Stream interval
+	StreamInterval int
+
+	// Lock for protobuf packets
 	ProtoBufPacketsMutex sync.Mutex
 
-	// list of client message data packets to be sent to client
+	// Socket request router
+	SocketRequestRouter ISocketRequestRouter
+
+	// Client message data packets to be broadcasted
 	ClientEventsQueue []ClientEvent
 
+	// Table updates to be broadcasted
 	TableUpdatesQueue []state.TableUpdate
 
-	// a pool of connections
+	// A pool of connections
 	Conns      map[*websocket.Conn]ConnectionType
 	ConnsMutex sync.Mutex
 
+	// PlayerID to websocket connection
 	PlayerIdToConnection      map[int]*websocket.Conn
 	PlayerIdToConnectionMutex sync.Mutex
 }
-
-// ProtoBuf Packets
-// type ProtoBufMessagePackets []*NetworkMessage
 
 // update packet container a group of table updates with additional metadata
 // that helps clients create the scene
@@ -85,73 +93,88 @@ func (e *EventCtx) AddEvent(msg *NetworkMessage, playerIds []int) {
 
 type ISocketRequestRouter func(ctx *EngineCtx, requestMsg *NetworkMessage, socketConnection *websocket.Conn)
 
-// Start WS Server
-func NewStreamServer(s *gin.Engine, ctx *EngineCtx, router ISocketRequestRouter, websocketPort int) (*StreamServer, error) {
-	ws := StreamServer{}
-	ws.Conns = make(map[*websocket.Conn]ConnectionType)
-	ws.ClientEventsQueue = make([]ClientEvent, 0)
-	ws.PlayerIdToConnection = make(map[int]*websocket.Conn)
-	ws.ProtoBufPacketsMutex = sync.Mutex{}
+// Initialize new stream server
+func NewStreamServer() *StreamServer {
+	s := &StreamServer{}
+
+	s.Port = DefaultWebsocketPort
+	s.Conns = make(map[*websocket.Conn]ConnectionType)
+	s.ClientEventsQueue = make([]ClientEvent, 0)
+	s.PlayerIdToConnection = make(map[int]*websocket.Conn)
+	s.ProtoBufPacketsMutex = sync.Mutex{}
+	s.StreamInterval = int(defaultStreamInterval)
+
+	return s
+}
+
+// Set socket request router
+func (s *StreamServer) SetSocketRequestRouter(router ISocketRequestRouter) {
+	s.SocketRequestRouter = router
+}
+
+// Start websocket server
+// TODO: have this return an error?
+func (s *StreamServer) Start(ctx *EngineCtx) {
 
 	upgrader := websocket.Upgrader{
-		ReadBufferSize:  ReadBufferSize,
-		WriteBufferSize: WriteBufferSize,
+		ReadBufferSize:  readBufferSize,
+		WriteBufferSize: writeBufferSize,
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
 	}
 
-	s.GET("/", func(context *gin.Context) {
+	httpServer := ctx.GinHttpEngine
+
+	httpServer.GET("/", func(context *gin.Context) {
 		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		ws.AddConnection(websocket, false)
+		s.AddConnection(websocket, false)
 
 		for {
 			_, msg, err := websocket.ReadMessage()
 
 			if err != nil {
-				delete(ws.Conns, websocket)
+				delete(s.Conns, websocket)
 				break
 			}
 
 			// deserialize from bytes
 			requestMsg := NewMessageFromBuffer(msg)
 
-			router(ctx, requestMsg, websocket)
+			s.SocketRequestRouter(ctx, requestMsg, websocket)
 		}
 	})
 
 	// subscribe to all table updates
-	s.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
+	httpServer.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
 		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		ws.AddConnection(websocket, true)
+		s.AddConnection(websocket, true)
 
 		for {
 			_, _, err := websocket.ReadMessage()
 
 			if err != nil {
-				ws.RemoveConnection(websocket)
+				s.RemoveConnection(websocket)
 				break
 			}
 		}
 	})
 
-	ws.PublishMessage()
+	s.PublishMessage()
 
 	go func() {
-		http.ListenAndServe(fmt.Sprintf("%s%d", ":", websocketPort), s)
+		http.ListenAndServe(fmt.Sprintf("%s%d", ":", s.Port), ctx.GinHttpEngine)
 	}()
-
-	return &ws, nil
 }
 
 func (ws *StreamServer) SetPlayerIdToConnection(playerId int, conn *websocket.Conn) {
@@ -181,7 +204,7 @@ type WSMessage struct {
 }
 
 func (ws *StreamServer) PublishMessage() {
-	ticker := time.NewTicker(StreamInterval)
+	ticker := time.NewTicker(defaultStreamInterval)
 	quit := make(chan struct{})
 
 	go func() {

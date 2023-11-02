@@ -2,15 +2,18 @@ package server
 
 import (
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/curio-research/keystone/state"
+	"github.com/fatih/color"
+	"github.com/gin-gonic/gin"
 )
 
-// ---------------------------------------
-// context containing everything about the game server
-// ---------------------------------------
-
+// Context containing everything for the game server
 type EngineCtx struct {
 	// Unique game ID
 	GameId string
@@ -30,6 +33,12 @@ type EngineCtx struct {
 	// Stream server for broadcasting data such as table changes and errors to clients
 	Stream *StreamServer
 
+	// Gin HTTP server
+	GinHttpEngine *gin.Engine
+
+	// HTTP port
+	HttpPort int
+
 	// Transaction queue
 	TransactionsToSaveLock sync.Mutex
 
@@ -41,25 +50,23 @@ type EngineCtx struct {
 
 	SaveTransactionsHandler ISaveTransactions
 
-	// implementations on how to broadcast events and errors
+	// Implementations on how to broadcast events and errors
 	SystemErrorHandler     ISystemErrorHandler
 	SystemBroadcastHandler ISystemBroadcastHandler
 
 	// "dev", "prod"
 	Mode GameMode
 
-	// whether game should record error in error log
+	// Whether game should record error in error log
 	ShouldRecordError bool
 
-	// error log for printing when testing
+	// Error log for printing when testing
 	ErrorLog []ErrorLog
 
 	StateUpdatesMutex sync.Mutex
 
-	// state updates
+	// State updates
 	PendingStateUpdatesToSave []state.TableUpdate
-
-	RegisterTablesToWorldCb func(w *state.GameWorld)
 }
 
 // for debugging
@@ -131,4 +138,129 @@ func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
 	newTransactions := make([]TransactionSchema, len(transactions))
 	copy(newTransactions, transactions)
 	return newTransactions
+}
+
+// Set game ID
+func (ctx *EngineCtx) SetGameId(id string) {
+	ctx.GameId = id
+}
+
+// Add tables to world
+func (ctx *EngineCtx) AddTables(tables map[interface{}]*state.TableBaseAccessor[any]) {
+	for _, table := range tables {
+		ctx.World.AddTable(table)
+	}
+}
+
+// Set save state handler
+func (ctx *EngineCtx) SetSaveStateHandler(saveStateHandler ISaveState, saveInterval time.Duration) {
+	ctx.SaveStateHandler = saveStateHandler
+	SetupSaveStateLoop(ctx, saveInterval)
+}
+
+// Set save transaction handler
+func (ctx *EngineCtx) SetSaveTxHandler(saveTxHandler ISaveTransactions, saveInterval time.Duration) {
+	ctx.SaveTransactionsHandler = saveTxHandler
+	SetupSaveTxLoop(ctx, saveInterval)
+}
+
+// Interval: how frequently a system ticks (in milliseconds)
+func (ctx *EngineCtx) AddSystem(IntervalMs int, tickFunction TickSystemFunction) {
+	ctx.GameTick.Schedule.AddSystem(IntervalMs, tickFunction)
+}
+
+// Set broadcast event handler
+func (ctx *EngineCtx) SetEmitEventHandler(broadcastHandler ISystemBroadcastHandler) {
+	ctx.SystemBroadcastHandler = broadcastHandler
+}
+
+// Set broadcast error handler
+func (ctx *EngineCtx) SetEmitErrorHandler(errorHandler ISystemErrorHandler) {
+	ctx.SystemErrorHandler = errorHandler
+}
+
+// Set tick rate (milliseconds)
+func (ctx *EngineCtx) SetTickRate(tickRateMs int) {
+	ctx.GameTick.TickRateMs = tickRateMs
+}
+
+// Set websocket port
+func (ctx *EngineCtx) SetWebsocketPort(port int) {
+	ctx.Stream.Port = port
+}
+
+// Set websocket request router
+func (ctx *EngineCtx) SetSocketRequestRouter(router ISocketRequestRouter) {
+	ctx.Stream.SetSocketRequestRouter(router)
+}
+
+// Set HTTP port
+func (ctx *EngineCtx) SetPort(port int) {
+	ctx.HttpPort = port
+}
+
+// Start Keystone game server
+func (ctx *EngineCtx) Start() {
+	color.HiYellow("")
+	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
+	fmt.Println()
+
+	color.HiWhite(padStringToLength("Tick rate", 20) + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
+
+	ctx.IsLive = true
+
+	// Start stream server
+	ctx.Stream.Start(ctx)
+
+	color.HiWhite(padStringToLength("Websocket port", 20) + strconv.Itoa(ctx.Stream.Port))
+
+	// Start game tick system
+	ctx.GameTick.Start(ctx)
+
+	color.HiWhite(padStringToLength("Http port", 20) + strconv.Itoa(ctx.HttpPort))
+
+	// warning messages
+
+	// TODO: change to log library
+
+	fmt.Println()
+
+	if ctx.SystemErrorHandler == nil {
+		fmt.Println("system error handler not provided")
+	}
+
+	if ctx.SystemBroadcastHandler == nil {
+		fmt.Println("system broadcast handler not provided")
+	}
+
+	if ctx.SaveTransactionsHandler == nil {
+		fmt.Println("save transactions handler not provided")
+	}
+
+	if ctx.SaveStateHandler == nil {
+		fmt.Println("save state handler not provided")
+	}
+
+	if ctx.Stream == nil {
+		fmt.Println("websocket routes not registered")
+	}
+
+	if len(ctx.World.Tables) == 0 {
+		fmt.Println("no tables registered")
+	}
+
+	if len(ctx.GameTick.Schedule.ScheduledTickSystems) == 0 {
+		fmt.Println("no tables registered")
+	}
+
+	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
+
+}
+
+func padStringToLength(inputStr string, desiredLength int) string {
+	if len(inputStr) >= desiredLength {
+		return inputStr
+	}
+	padding := strings.Repeat(" ", desiredLength-len(inputStr))
+	return inputStr + padding
 }

@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/curio-research/keystone/server"
-	"github.com/curio-research/keystone/startup"
+	"github.com/curio-research/keystone/server/startup"
 	"github.com/curio-research/keystone/state"
 	"github.com/curio-research/keystone/utils"
 )
@@ -148,19 +148,18 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 }
 
 func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
-	// initiate an empty tick schedule
-	var tables []state.ITable
-	for _, accessor := range testSchemaToAccessors {
-		tables = append(tables, accessor)
-	}
 
-	ctx := startup.NewGameEngine("test", server.TickRate, tables...)
+	ctx := startup.NewGameEngine()
+	ctx.SetGameId("test")
+	ctx.SetTickRate(20)
+	ctx.AddTables(testSchemaToAccessors)
+
+	ctx.SetEmitErrorHandler(&testErrorHandler{})
+	ctx.SetEmitEventHandler(&testBroadcastHandler{})
+
 	for _, system := range systems {
-		ctx.GameTick.Schedule.AddTickSystem(0, system)
+		ctx.GameTick.Schedule.AddSystem(0, system)
 	}
-
-	startup.RegisterErrorHandler(ctx, &testErrorHandler{})
-	startup.RegisterBroadcastHandler(ctx, &testBroadcastHandler{})
 
 	return ctx
 }

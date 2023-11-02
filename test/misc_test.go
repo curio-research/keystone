@@ -112,7 +112,7 @@ func TestApplyTx(t *testing.T) {
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
 
-	ctx.GameTick.Schedule.AddTickSystem(0, perfTestSystem)
+	ctx.GameTick.Schedule.AddSystem(0, perfTestSystem)
 
 	startTime := time.Now()
 

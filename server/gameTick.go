@@ -50,7 +50,7 @@ func NewTickSchedule() *TickSchedule {
 }
 
 // tick interval in milliseconds
-func (s *TickSchedule) AddTickSystem(tickInterval int, tickFunction TickSystemFunction) {
+func (s *TickSchedule) AddSystem(tickInterval int, tickFunction TickSystemFunction) {
 	s.ScheduledTickSystems = append(s.ScheduledTickSystems, TickSystem{TickInterval: tickInterval, TickFunction: tickFunction})
 }
 
@@ -210,11 +210,12 @@ func NewGameTick(tickRateMs int) *GameTick {
 	return &GameTick{
 		TickNumber: 1,
 		TickRateMs: tickRateMs,
+		Schedule:   NewTickSchedule(),
 	}
 }
 
 // set up a game tick
-func (g *GameTick) Setup(ctx *EngineCtx) {
+func (g *GameTick) Start(ctx *EngineCtx) {
 	tickerTime := time.Duration(g.TickRateMs) * time.Millisecond
 	ticker := time.NewTicker(tickerTime)
 

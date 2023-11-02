@@ -15,5 +15,7 @@ const (
 	DefaultServerPort    = 9000
 	DefaultWebsocketPort = 9001
 
+	DefaultTickRate = 100 // ms
+
 	TickRate = 100
 )
