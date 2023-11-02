@@ -18,8 +18,8 @@ func Test_PublicKeyAuth_RSA(t *testing.T) {
 
 		personTable.Set(ctx.W, req.Data.Entity, newPerson)
 	}, server.VerifyRSAPublicKeyAuth[testPersonRequest]())
-	ctx := initializeTestWorld(testSystem)
 
+	ctx := initializeTestWorld(testSystem)
 	personTable.AddSpecific(ctx.World, testEntity1, Person{
 		Name: testName1,
 	})
@@ -32,6 +32,8 @@ func Test_PublicKeyAuth_RSA(t *testing.T) {
 	require.Nil(t, err)
 
 	b, err := json.Marshal(publicKeyAuth)
+	require.Nil(t, err)
+
 	keystoneReq := server.NewKeystoneRequest(request, map[server.HeaderField]json.RawMessage{
 		server.RSAPublicKeyAuthHeader: b,
 	})
@@ -50,8 +52,8 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 
 		personTable.Set(ctx.W, req.Data.Entity, newPerson)
 	}, server.VerifyECDSAPublicKeyAuth[testPersonRequest]())
-	ctx := initializeTestWorld(testSystem)
 
+	ctx := initializeTestWorld(testSystem)
 	personTable.AddSpecific(ctx.World, testEntity1, Person{
 		Name: testName1,
 	})
@@ -62,8 +64,10 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 	request := testPersonRequest{Val: Person{Name: testName2}, Entity: testEntity1}
 	publicKeyAuth, err := server.NewECDSAPublicKeyAuth(privateKey, request)
 	require.Nil(t, err)
+
 	b, err := json.Marshal(publicKeyAuth)
 	require.Nil(t, err)
+
 	keystoneReq := server.NewKeystoneRequest(request, map[server.HeaderField]json.RawMessage{
 		server.ECDSAPublicKeyAuthHeader: b,
 	})
