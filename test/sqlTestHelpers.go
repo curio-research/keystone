@@ -235,14 +235,14 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 	p1Pos2 := testPos4
 	p2Pos2 := testPos5
 
-	server.QueueTxAtTime(initialGameWorld, 2, MovePersonRequest{
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneRequest(MovePersonRequest{
 		TargetEntity: p1Entity,
 		NewPosition:  p1Pos2,
-	}, "", true)
-	server.QueueTxAtTime(initialGameWorld, 2, MovePersonRequest{
+	}, nil), "", true)
+	server.QueueTxAtTime(initialGameWorld, 2, server.NewKeystoneRequest(MovePersonRequest{
 		TargetEntity: p2Entity,
 		NewPosition:  p2Pos2,
-	}, "", true)
+	}, nil), "", true)
 
 	// transactions for tick 3
 	p1Pos3 := testPos6
