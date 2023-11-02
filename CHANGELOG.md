@@ -1,2 +1,1 @@
-- Add state root calculator
-- Add support for nested structs and arrays in schemas, with support for SQL and SQLite state sync
+- Prettify server bootup
