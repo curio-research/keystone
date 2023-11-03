@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package serverpb;
+option go_package = "github.com/curio-research/keystone-starter-kit/server/serverpb";
+
+
+enum CMD {
+    S2C_Error = 0;
+}
+
+message S2C_ErrorMessage {
+  string Content = 1;
+}
+

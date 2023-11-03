@@ -48,7 +48,17 @@ func (m *MySQLSaveStateHandler) initializeDBTables() error {
 
 	// all tables that need to be created
 	allSchemas := []any{}
+
+	// user defined table schemas
 	for schema, _ := range m.schemasToAccessors {
+		if reflect.TypeOf(schema).Kind() != reflect.Pointer {
+			return fmt.Errorf("schema %v is not a pointer to the struct", schema)
+		}
+		allSchemas = append(allSchemas, schema)
+	}
+
+	// system schemas
+	for schema, _ := range server.BaseTableSchemasToAccessors {
 		if reflect.TypeOf(schema).Kind() != reflect.Pointer {
 			return fmt.Errorf("schema %v is not a pointer to the struct", schema)
 		}
@@ -68,6 +78,8 @@ func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) erro
 	// process table updates
 	tableUpdateOperationsByTable, tableRemovalOperationsByTable := processUpdatesForUpload(tableUpdates)
 
+	// fmt.Println(tableUpdateOperationsByTable, tableRemovalOperationsByTable)
+
 	// update operations
 	for table, updates := range tableUpdateOperationsByTable {
 		arr := m.castToSchemaArray(table, updates)
@@ -82,6 +94,7 @@ func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) erro
 	// removal operations
 	for table, removals := range tableRemovalOperationsByTable {
 		arr := m.castToSchemaArray(table, removals)
+
 		tx := m.dbConnection.Delete(arr)
 		if tx.Error != nil {
 			return tx.Error
@@ -94,12 +107,23 @@ func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) erro
 // given a schema type, use the mapping from tables to cast to an array of that type
 func (m *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
 	var accessor *state.TableBaseAccessor[any]
+
+	// loop through user-defined schemas
 	for _, schemaAccessor := range m.schemasToAccessors {
 		if strings.Contains(schemaAccessor.Name(), schemaType) {
 			accessor = schemaAccessor
 			break
 		}
 	}
+
+	// loop through base schemas in keystone
+	for _, schemaAccessor := range server.BaseTableSchemasToAccessors {
+		if strings.Contains(schemaAccessor.Name(), schemaType) {
+			accessor = schemaAccessor
+			break
+		}
+	}
+
 	if accessor == nil {
 		return nil
 	}

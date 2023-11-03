@@ -18,6 +18,7 @@ type GameStateResponse struct {
 	Tables []TableData `json:"tables"`
 }
 
+// fetch the world state
 func GetStateRouteHandler(ctx *server.EngineCtx) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req, err := server.DecodeRequestBody[DownloadStateRequest](c)

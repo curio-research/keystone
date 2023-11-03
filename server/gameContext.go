@@ -46,8 +46,10 @@ type EngineCtx struct {
 	TransactionsToSave []TransactionSchema
 
 	// Handles interactions for saving stae
+	ShouldSaveState  bool
 	SaveStateHandler ISaveState
 
+	ShouldSaveTransactions  bool
 	SaveTransactionsHandler ISaveTransactions
 
 	// Implementations on how to broadcast events and errors
@@ -194,6 +196,18 @@ func (ctx *EngineCtx) SetSocketRequestRouter(router ISocketRequestRouter) {
 	ctx.Stream.SetSocketRequestRouter(router)
 }
 
+// Whether engine runs the state backup service.
+// By default disabled for local development
+func (ctx *EngineCtx) SetSaveState(saveState bool) {
+	ctx.ShouldSaveState = saveState
+}
+
+// Whether engine runs the transaction backup service
+// By default disabled for local development
+func (ctx *EngineCtx) SetSaveTx(saveTx bool) {
+	ctx.ShouldSaveTransactions = saveTx
+}
+
 // Set HTTP port
 func (ctx *EngineCtx) SetPort(port int) {
 	ctx.HttpPort = port
@@ -204,6 +218,8 @@ func (ctx *EngineCtx) Start() {
 	color.HiYellow("")
 	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
 	fmt.Println()
+
+	color.HiWhite(padStringToLength("Game Id", 20) + (ctx.GameId))
 
 	color.HiWhite(padStringToLength("Tick rate", 20) + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
 
@@ -218,6 +234,9 @@ func (ctx *EngineCtx) Start() {
 	ctx.GameTick.Start(ctx)
 
 	color.HiWhite(padStringToLength("Http port", 20) + strconv.Itoa(ctx.HttpPort))
+
+	color.HiWhite(padStringToLength("State backup", 20) + strconv.FormatBool(ctx.ShouldSaveState))
+	color.HiWhite(padStringToLength("Tx backup", 20) + strconv.FormatBool(ctx.ShouldSaveTransactions))
 
 	// warning messages
 
