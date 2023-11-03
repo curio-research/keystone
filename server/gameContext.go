@@ -196,12 +196,14 @@ func (ctx *EngineCtx) SetSocketRequestRouter(router ISocketRequestRouter) {
 	ctx.Stream.SetSocketRequestRouter(router)
 }
 
-// Whether engine runs the state backup service
+// Whether engine runs the state backup service.
+// By default disabled for local development
 func (ctx *EngineCtx) SetSaveState(saveState bool) {
 	ctx.ShouldSaveState = saveState
 }
 
 // Whether engine runs the transaction backup service
+// By default disabled for local development
 func (ctx *EngineCtx) SetSaveTx(saveTx bool) {
 	ctx.ShouldSaveTransactions = saveTx
 }

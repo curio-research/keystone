@@ -35,7 +35,7 @@ func NewGameEngine() *server.EngineCtx {
 	streamServer := server.NewStreamServer()
 
 	// This is the master game context being passed around, containing pointers to everything
-	gameCtx := &server.EngineCtx{
+	ctx := &server.EngineCtx{
 		GameId:                 gameId,
 		IsLive:                 false,
 		World:                  gameWorld,
@@ -48,7 +48,11 @@ func NewGameEngine() *server.EngineCtx {
 		ShouldSaveTransactions: false,
 	}
 
-	return gameCtx
+	// Use protobuf based handlers as default
+	ctx.SetEmitErrorHandler(&server.ProtoBasedErrorHandler{})
+	ctx.SetEmitEventHandler(&server.ProtoBasedBroadcastHandler{})
+
+	return ctx
 }
 
 func RegisterRewindEndpoint(ctx *server.EngineCtx) {
