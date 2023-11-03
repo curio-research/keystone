@@ -1,2 +1,2 @@
-- Prettify server bootup
-- Support embedded arrays
+- Enshrine protobuf based event handler as default
+- Prettify everything
