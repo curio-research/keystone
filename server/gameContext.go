@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -205,6 +204,8 @@ func (ctx *EngineCtx) Start() {
 	color.HiYellow("---- 🗝  Powered by Keystone 🗿 ----")
 	fmt.Println()
 
+	color.HiWhite(padStringToLength("Game Id", 20) + (ctx.GameId))
+
 	color.HiWhite(padStringToLength("Tick rate", 20) + strconv.Itoa(ctx.GameTick.TickRateMs) + "ms")
 
 	ctx.IsLive = true
@@ -253,7 +254,10 @@ func (ctx *EngineCtx) Start() {
 		fmt.Println("no tables registered")
 	}
 
-	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
+	ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort))
+
+	fmt.Println()
+	fmt.Println()
 
 }
 

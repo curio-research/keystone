@@ -7,19 +7,22 @@ import (
 )
 
 type TransactionSchema struct {
+	// Entity ID
+	Id int `gorm:"primaryKey;autoIncrement:false"`
+
+	// Transaction type
 	Type string
 
-	// a uuid that's sent from the client, which is usd to identify which quest has been satisfied
+	// A uuid that's sent from the client, which is usd to identify which quest has been satisfied
 	Uuid string
 
-	// data payload serialized to string format
+	// Data payload serialized to string format
 	Data string
 
-	// tick number when the transaction was to be processed
+	// Tick number when the transaction was to be processed
 	TickNumber int
 
-	Id int
-
+	// Timestamp of when the transaction was received by server
 	UnixTimestamp int
 
 	// whether transaction was submitted by player or other systems
@@ -29,6 +32,10 @@ type TransactionSchema struct {
 var (
 	TransactionTable = state.NewTableAccessor[TransactionSchema]()
 )
+
+var BaseTableSchemasToAccessors = map[interface{}]*state.TableBaseAccessor[any]{
+	&TransactionSchema{}: (*state.TableBaseAccessor[any])(TransactionTable),
+}
 
 func AddSystemTransaction(w *state.GameWorld, tickNumber int, transactionType string, data string, uuid string, isExternal bool) int {
 	entity := TransactionTable.Add(w, TransactionSchema{
