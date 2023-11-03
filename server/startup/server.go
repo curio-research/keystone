@@ -44,6 +44,8 @@ func NewGameEngine() *server.EngineCtx {
 		GinHttpEngine:          ginHttpServer,
 		Stream:                 streamServer,
 		HttpPort:               server.DefaultServerPort,
+		ShouldSaveState:        false,
+		ShouldSaveTransactions: false,
 	}
 
 	return gameCtx

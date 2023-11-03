@@ -31,16 +31,18 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval time.Duration) {
 
 	go func() {
 		for range ticker.C {
-			if ctx.IsLive {
-				// deep copy pending state updates and clear then
+			if ctx.IsLive && ctx.ShouldSaveState {
+				// Deep copy pending state updates to save and clear then
 				updatesToPublish := state.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
 				ctx.ClearStateUpdatesToSave()
+
 				ctx.SaveStateHandler.SaveState(updatesToPublish)
 			}
 		}
 	}()
 }
 
+// Set up save transaction loop
 func SetupSaveTxLoop(ctx *EngineCtx, saveInterval time.Duration) {
 	tickerTime := time.Second
 	if saveInterval != 0 {
@@ -51,7 +53,7 @@ func SetupSaveTxLoop(ctx *EngineCtx, saveInterval time.Duration) {
 
 	go func() {
 		for range ticker.C {
-			if ctx.IsLive {
+			if ctx.IsLive && ctx.ShouldSaveTransactions {
 				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
 				ctx.ClearTransactionsToSave()
 				ctx.SaveTransactionsHandler.SaveTransactions(transactionsToSave)
