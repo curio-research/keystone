@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func Test_PublicKeyAuth_ECDSA(t *testing.T) {
+func Test_PublicKeyAuth_EthereumWallet(t *testing.T) {
 	testSystem := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testPersonRequest]) {
 		req := ctx.Req
 		newPerson := req.Data.Val
