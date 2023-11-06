@@ -9,7 +9,7 @@ type IMiddleware[T any] func(ctx *TransactionCtx[T]) bool // manually emit error
 type HeaderField string
 
 const (
-	ECDSAPublicKeyAuthHeader HeaderField = "ecdsaPublicKeyAuth"
+	EthereumWalletAuthHeader HeaderField = "ethereumWalletAuth"
 )
 
 // wraps the headers

@@ -15,7 +15,7 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 		newPerson := req.Data.Val
 
 		personTable.Set(ctx.W, req.Data.Entity, newPerson)
-	}, server.VerifyECDSAPublicKeyAuth[testPersonRequest]())
+	}, server.VerifyEthereumWalletAuth[testPersonRequest]())
 
 	ctx := initializeTestWorld(testSystem)
 	personTable.AddSpecific(ctx.World, testEntity1, Person{
@@ -26,14 +26,14 @@ func Test_PublicKeyAuth_ECDSA(t *testing.T) {
 	require.Nil(t, err)
 
 	request := testPersonRequest{Val: Person{Name: testName2}, Entity: testEntity1}
-	publicKeyAuth, err := server.NewECDSAPublicKeyAuth(privateKey, request)
+	publicKeyAuth, err := server.NewEthereumWalletAuth(privateKey, request)
 	require.Nil(t, err)
 
 	b, err := json.Marshal(publicKeyAuth)
 	require.Nil(t, err)
 
 	keystoneReq := server.NewKeystoneTx(request, map[server.HeaderField]json.RawMessage{
-		server.ECDSAPublicKeyAuthHeader: b,
+		server.EthereumWalletAuthHeader: b,
 	})
 
 	server.QueueTxFromExternal(ctx, keystoneReq, "")
