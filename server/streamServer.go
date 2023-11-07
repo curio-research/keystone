@@ -16,7 +16,7 @@ import (
 const (
 	readBufferSize        = 1024
 	writeBufferSize       = 1024
-	defaultStreamInterval = 100 * time.Millisecond
+	defaultStreamInterval = 100 // ms
 )
 
 type ConnectionType struct {
@@ -27,7 +27,7 @@ type StreamServer struct {
 	// Websocket port
 	Port int
 
-	// Stream interval
+	// Stream interval (milliseconds)
 	StreamInterval int
 
 	// Lock for protobuf packets
@@ -170,7 +170,7 @@ func (s *StreamServer) Start(ctx *EngineCtx) {
 		}
 	})
 
-	s.PublishMessage()
+	s.StartMessageBroadcastLoop()
 
 	go func() {
 		http.ListenAndServe(fmt.Sprintf("%s%d", ":", s.Port), ctx.GinHttpEngine)
@@ -203,8 +203,9 @@ type WSMessage struct {
 	Payload   any    `json:"message"`
 }
 
-func (ws *StreamServer) PublishMessage() {
-	ticker := time.NewTicker(defaultStreamInterval)
+// Start message broadcast loop
+func (ws *StreamServer) StartMessageBroadcastLoop() {
+	ticker := time.NewTicker(time.Duration(ws.StreamInterval))
 	quit := make(chan struct{})
 
 	go func() {

@@ -213,6 +213,11 @@ func (ctx *EngineCtx) SetPort(port int) {
 	ctx.HttpPort = port
 }
 
+// Set rate of streaming packets to clients (milliseconds)
+func (ctx *EngineCtx) SetStreamRate(rate int) {
+	ctx.Stream.StreamInterval = rate
+}
+
 // Start Keystone game server
 func (ctx *EngineCtx) Start() {
 	color.HiYellow("")
