@@ -1,2 +1,3 @@
 - Add variable stream rate for stream server
 - Clean up and prettify for release
+- Rename eth wallet package
