@@ -205,7 +205,8 @@ type WSMessage struct {
 
 // Start message broadcast loop
 func (ws *StreamServer) StartMessageBroadcastLoop() {
-	ticker := time.NewTicker(time.Duration(ws.StreamInterval))
+
+	ticker := time.NewTicker(time.Duration(ws.StreamInterval) * time.Millisecond)
 	quit := make(chan struct{})
 
 	go func() {
@@ -319,5 +320,7 @@ func (ws *StreamServer) FetchTableUpdatesFromQueue() []state.TableUpdate {
 
 // clear all table updates from queue
 func (ws *StreamServer) ClearTableUpdatesQueue() {
+	ws.ProtoBufPacketsMutex.Lock()
 	ws.TableUpdatesQueue = make([]state.TableUpdate, 0)
+	ws.ProtoBufPacketsMutex.Unlock()
 }
