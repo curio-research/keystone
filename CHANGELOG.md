@@ -1,2 +1,2 @@
-- Enshrine protobuf based event handler as default
-- Prettify everything
+- Add variable stream rate for stream server
+- Clean up and prettify for release
