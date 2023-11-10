@@ -1,0 +1,6 @@
+{
+  "initializeWorld": "Initialize World",
+  "createPlayer": "Create Player",
+  "movePlayer": "Move Player",
+  "fireProjectile": "Shots Fired"
+}

@@ -2,9 +2,9 @@ import React from "react";
 import { DocsThemeConfig } from "nextra-theme-docs";
 
 const config: DocsThemeConfig = {
-  logo: <div style={{ fontSize: "25px", fontWeight: 600 }}>Curio Chain</div>,
+  logo: <div style={{ fontSize: "25px", fontWeight: 600 }}>Keystone</div>,
   project: {
-    link: "https://github.com/curio-research",
+    link: "https://github.com/curio-research/keystone",
   },
   chat: {
     link: "https://twitter.com/0xcurio",
@@ -21,8 +21,8 @@ const config: DocsThemeConfig = {
   footer: {
     text: "Nextra Docs Template",
   },
-  primaryHue: 251,
-  logoLink: "https://www.curio.gg",
+  primaryHue: 33,
+  logoLink: "https://www.keystonesdk.com",
 };
 
 export default config;

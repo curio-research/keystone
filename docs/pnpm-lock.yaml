@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   next:
     specifier: ^13.0.6
@@ -10,6 +14,9 @@ dependencies:
   nextra-theme-docs:
     specifier: latest
     version: 2.4.2(next@13.0.6)(nextra@2.4.2)(react-dom@18.2.0)(react@18.2.0)
+  pnpm:
+    specifier: ^8.10.2
+    version: 8.10.2
   react:
     specifier: ^18.2.0
     version: 18.2.0
@@ -1692,6 +1699,12 @@ packages:
 
   /picocolors@1.0.0:
     resolution: {integrity: sha512-1fygroTLlHu66zi26VoTDv8yRgm0Fccecssto+MhsZ0D/DGW2sm8E8AjW7NU5VVTRt5GxbeZ5qBuJr+HyLYkjQ==}
+    dev: false
+
+  /pnpm@8.10.2:
+    resolution: {integrity: sha512-B4IJPVumx62UYggbwe8HdQFqS0EJ7KHh/tzqbxEBQ69fUJk9s2xCfU+oxivjkgoyJNsS2nGdJGyhndnxgEjDPA==}
+    engines: {node: '>=16.14'}
+    hasBin: true
     dev: false
 
   /postcss@8.4.14:
