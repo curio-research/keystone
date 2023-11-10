@@ -1,10 +1,7 @@
 {
   "index": "Introduction",
   "overview": "Overview",
-  "initializeWorld": "Initialize World",
-  "createPlayer": "Create Player",
-  "movePlayer": "Move Player",
-  "fireProjectile": "Shots Fired",
+  "shooter-tutorial": "Shooter game tutorial",
   "contact": {
     "title": "Contact ↗",
     "type": "page",

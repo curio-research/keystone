@@ -91,6 +91,6 @@ playerEntities = data.Player.Filter(gameWorld, PlayerSchema{
 player = data.Player.Get(gameWorld, players[0])
 ```
 
-If there are already existing players, we can emit errors and additional events back  to the client through our websocket endpoint that the clients subscribe to. More support and details on emitting events will come soon.
+If there are already existing players, we can emit errors and additional events back to the client through our websocket endpoint that the clients subscribe to. More support and details on emitting events will come soon.
 
 Finally, registering a player with a public key is as easy as just creating the actual player object. We can access this player using syntax such as:

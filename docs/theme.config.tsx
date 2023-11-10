@@ -22,7 +22,7 @@ const config: DocsThemeConfig = {
     text: "Nextra Docs Template",
   },
   primaryHue: 33,
-  logoLink: "https://www.curio.gg",
+  logoLink: "https://www.keystonesdk.com",
 };
 
 export default config;
