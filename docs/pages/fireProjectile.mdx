@@ -1,0 +1,115 @@
+# Shots Fired
+
+Now that we can move our player, let’s actually have some fun, shall we?
+
+## Objective
+
+1. Create projectiles that get updated in position over time
+2. Prevent projectiles from going through obstacles/animals/players
+3. Replace the animal/player with some resource/gold on death
+
+The `FireProjectileSystem` is also a request-based system, but it is unique in that it queues a request to another system internally.
+
+```go
+type FireProjectileRequest struct {
+	Direction helper.Direction `json:"direction"`
+	PlayerId  int              `json:"playerId"`
+}
+
+var FireProjectileSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[FireProjectileRequest]) {
+	req := ctx.Req.Data
+	w := ctx.W
+
+	direction := req.Direction
+	initialPosition, found := locationOfPlayer(w, req.PlayerId)
+	if !found {
+		return
+	}
+
+	projectileID := data.Projectile.Add(w, data.ProjectileSchema{ // Explanation 1
+		Position: initialPosition,
+	})
+
+	tickNumber := ctx.GameCtx.GameTick.TickNumber + constants.BulletSpeed
+
+	server.QueueTxFromInternal[UpdateProjectileRequest](w, tickNumber, server.NewKeystoneTx(UpdateProjectileRequest{ // Explanation 2
+		Direction:    direction,
+		ProjectileID: projectileID,
+		PlayerID:     req.PlayerId,
+	}, nil), "")
+}, VerifyWalletAndIdentity[FireProjectileRequest]())
+
+func locationOfPlayer(w state.IWorld, playerId int) (state.Pos, bool) {
+	playerEntity := data.Player.Filter(w, data.PlayerSchema{PlayerId: playerId}, []string{"PlayerId"})
+	if len(playerEntity) == 0 {
+		return state.Pos{}, false
+	}
+
+	player := data.Player.Get(w, playerEntity[0])
+	return player.Position, true
+}
+```
+
+```go
+type UpdateProjectileRequest struct {
+	Direction    helper.Direction
+	ProjectileID int
+	PlayerID     int
+}
+
+var UpdateProjectileSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[UpdateProjectileRequest]) {
+	w := ctx.W
+	req := ctx.Req.Data
+
+	// get projectile's position
+	projectile := data.Projectile.Get(w, req.ProjectileID)
+
+	nextPosition := helper.TargetTile(projectile.Position, req.Direction)
+
+	// check collisions
+	collision := updateWorldForCollision(w, nextPosition)
+	if collision {
+		// if collided, remove the projectile
+		data.Projectile.RemoveEntity(w, req.ProjectileID)
+
+	} else {
+		// update the position of the projectile
+		projectile.Position = nextPosition
+		data.Projectile.Set(w, req.ProjectileID, projectile)
+
+		// queue the next projectile update
+		tickNumber := ctx.GameCtx.GameTick.TickNumber + constants.BulletSpeed
+
+		server.QueueTxFromInternal[UpdateProjectileRequest](w, tickNumber, server.NewKeystoneTx(UpdateProjectileRequest{
+			Direction:    req.Direction,
+			ProjectileID: req.ProjectileID,
+			PlayerID:     req.PlayerID,
+		}, nil), "")
+	}
+
+})
+```
+
+## Explanation
+
+1. We get the position of the player and add a projectile in that location. We start the projectile from the position of a player since we can be sure that the projectile will be fine to start there.
+2. We queue a job to the `UpdateProjectileSystem` in `constants.BulletSpeed` more ticks.
+ 1. In the `UpdateProjectileSystem`, we check for collisions using `Filter` and update the position of the projectile one more step in its intended direction if possible.
+ 2. On collision, we apply the effects of the collision to the map, including the dropping of resources, or just the removal of the projectile entity.
+
+It is usually best for design in general to have one system be responsible for one thing, whether that’s creating the projectile or updating its location. Although it is a bit weird to start a projectile in the same position as the player, it is a tradeoff we were willing to make.
+
+---
+
+**Note:** Be careful about queuing jobs for the future, because if the system doesn't tick on the exact tick you scheduled it on, then you are going to miss the update.
+
+When you are doing something like this:
+
+```go
+tickNumberToScheduleJobFor := ctx.GameCtx.GameTick.TickNumber + [TickIncrement]
+```
+
+Two tips (`TickInterval` refers to the system you are queuing a job to) :
+
+1. Make sure that your `TickIncrement` is a multiple of the `TickInterval` / `TickRate`
+2. Make sure that the `TickInterval` % `TickRate` is 0. We round down if the expected tick is a decimal, and it’s nice to avoid changing intervals when scheduling jobs.
