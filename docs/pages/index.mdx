@@ -2,4 +2,16 @@ import { Callout } from "nextra-theme-docs";
 
 # Introduction
 
-Keystone is a rollup framework in development that powers high performance onchain games, allowing developers to build the types of real-time games like Age of Empires, while combining EVM smart contracts for its composability.
+Keystone is the best toolkit for building high performance and composable onchain games
+
+We believe that for onchain games as a whole to meaningfully expand, we must first deliver experiences that the average player is familiar with. We also believe that composability is the 10x leverage feature for onchain games.
+
+After building onchain games for 2 years, we summed up the following headaches:
+
+1. **Onchain games needed more performant systems.** Games built on a single EVM blockchain cannot handle many concurrent users let alone scale to millions. When deploying large applications on a single blockchain, one game instance heavily degrades the performance of another. Fundamentally, the EVM isn’t optimized for game specific needs, from the storage structure to how transactions are processed.
+2. **Blockchains are missing critical game-building features.** Traditional game servers are tick-driven, run on a highly performant game loop, and can process player requests automatically. However, the nature of blockchains blocks these systems from being built conveniently. Developers resort to lazy updating values to achieve similar effects, hindering developer experience.
+3. **Isolated developer experience**: Although EVM tooling has matured quite a lot, smart contract languages are ultimately unable to leverage existing mature toolchains and ecosystems for games, from useful libraries to 3rd party services (leaderboards, identity services, match making).
+
+Keystone represents a step-function improvement in how onchain games are built. It’s designed from grounds up to create a high-performance, data oriented game server with the composability of EVM smart contracts. Think about Keystone as combining the best of both worlds from traditional game engineering with cutting edge blockchain infrastructure research.
+
+With Keystone, game logic is written in Go instead of Solidity, can handle tens of thousands of transactions per second, and has support for networking code and easy state management out of the box.
