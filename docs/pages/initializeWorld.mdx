@@ -1,0 +1,99 @@
+# Initializing the Engine/World
+
+```go
+func main() {
+	// Initialize new game engine
+	ctx := startKeystone.NewGameEngine()
+
+	ctx.SetTickRate(constants.TickRate)
+
+	// Add systems
+	startup.AddSystems(ctx)
+
+	// Setup HTTP routes
+	startup.SetupRoutes(ctx)
+
+	// Register tables schemas to world
+	ctx.AddTables(data.SchemaMapping)
+
+	// Provision local SQLite
+	gormDB, err := gorm.Open(sqlite.Open("local.db"))
+	if err != nil {
+		panic("failed to connect database: " + err.Error())
+	}
+
+	SQLiteSaveStateHandler, SQLiteSaveTxHandler, err := gamedb.SQLHandlersFromDialector(gormDB.Dialector, ctx.GameId, data.SchemaMapping)
+	if err != nil {
+		panic("failed to create sqlite save handlers: " + err.Error())
+	}
+
+	startKeystone.RegisterRewindEndpoint(ctx)
+
+	ctx.SetSaveStateHandler(SQLiteSaveStateHandler, 0)
+	ctx.SetSaveTxHandler(SQLiteSaveTxHandler, 0)
+
+	ctx.SetSaveState(false)
+	ctx.SetSaveTx(false)
+
+	// Initialize game map
+	startup.InitWorld(ctx)
+
+	// Start game server!
+	ctx.Start()
+}
+```
+
+So many things to set! Let’s go through what is required and what is optional:
+
+## Required
+
+1. `SetupRoutes` - This sets routes to the `GinHttpEngine`, which is the `gin` Router through which HTTP requests are handled. You can replace the logic inside the `SetupRoutes` function to handle requests and queue them into your systems.
+
+Just make sure that your route for taking in requests to your systems follows this format:
+
+```go
+ctx.GinHttpEngine.POST("/endpoint", func(ginCtx *gin.Context) {
+		pushUpdateToQueue[RequestType](ginCtx, ctx)
+})
+```
+
+1. `AddSystems` - As we are going to discuss in the upcoming sections, a system is the workhorse of the engine, so we need to remember to add some if we want to actually do something in our game!
+
+    After you create a system, you can add it in `AddSystems` using the format:
+
+    ```go
+    ctx.AddSystem(constants.TickRate, systems.System) // (ms between system call rate, system)
+    ```
+
+
+ 3. `AddTables` - For all the data we need to store inside the game, we have to create a table for each type of data in the initialization of the game. You will see that the function actually takes in a `map[interface{}]*state.TableBaseAccessor[any]` instead of just a `[]interface{}`.
+
+One benefit of having global `TableAccessor`s is that they provide an easy way to access data. Another benefit is that they implement `ITable` so they can be used to add tables to the world. That is the reason why `AddTables` takes in a type of `map[interface{}]*state.TableBaseAccessor[any]` .
+
+```go
+// schemas.go
+var (
+	Game            = state.NewTableAccessor[GameSchema]()
+	LocalRandomSeed = state.NewTableAccessor[LocalRandSeedSchema]()
+	...
+)
+
+var SchemaMapping = map[interface{}]*state.TableBaseAccessor[any]{
+	&GameSchema{}:          (*state.TableBaseAccessor[any])(Game),
+	&LocalRandSeedSchema{}: (*state.TableBaseAccessor[any])(LocalRandomSeed),
+	...
+}
+```
+
+## Optional
+
+1. `SetTickRate` - sets the time interval between ticks (default `100ms`).
+2. `SetStreamRate` - sets the time interval between batch pushing updates to WS (default `100ms`)
+3. `startKeystone.RegisterRewindEndpoint` - supports rewinding your game
+4. `SetSaveState` - allows pushing updates to the handler specified by `SetSaveStateHandler`
+5.  `SetSaveTx` - allows pushing updates to the handler specified by `SetSaveTxHandler`
+6. Pre-initialize your world - you can add tiles/players or things that should exist on the map before the game starts
+    1. Note: these will not show up in the updates from `/subscribeTableUpdates`; you will need to get these in your client by using the `/getState` endpoint.
+
+
+After you have done all of these, you can use `ctx.Start` to start iterating through systems and working the magic of `Keystone`!

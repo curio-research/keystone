@@ -1,0 +1,130 @@
+# Player Movement
+
+Now that we’ve seen how the player is created, the next thing you might want to know is how this player moves and fights. After all, what good is creating a player if you can’t fight the enemies?
+
+Let’s start with movement!
+
+## Objectives
+
+1. Pass in a simple request into the backend (read: minimize request data) to move the player
+2. Create a system that verifies the position against constraints and updates the player’s position
+
+The movement system, like the `CreatePlayerSystem` is triggered when a request is made to the system.
+
+```go
+type MovePlayerRequest struct {
+	Direction helper.Direction `json:"direction"`
+	PlayerId  int              `json:"playerId"`
+}
+
+var MovePlayerSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[MovePlayerRequest]) {
+	w := ctx.W
+	req := ctx.Req.Data
+
+	playerRes := data.Player.Filter(w,
+		data.PlayerSchema{
+			PlayerId: req.PlayerId,
+		}, []string{"PlayerId"}) // Explanation 1
+	if len(playerRes) == 0 {
+		ctx.EmitError("you have not created a player yet", []int{req.PlayerId})
+		return
+	}
+
+	player := data.Player.Get(w, playerRes[0])
+	targetPos := helper.TargetTile(player.Position, req.Direction)
+	validTileToMove := helper.ValidateTileToMoveTo(w, targetPos) // Explanation 2
+
+	if validTileToMove {
+		player.Position = targetPos
+
+		// add any resources the player gained at the position
+		resource, found := resourceAtPosition(w, targetPos) // Explanation 3
+		if found {
+			data.Resource.RemoveEntity(w, resource.Id)
+			player.Resources += resource.Amount
+		}
+
+		data.Player.Set(w, player.Id, player)
+	}
+}, VerifyWalletAndIdentity[MovePlayerRequest]())
+
+func resourceAtPosition(w state.IWorld, position state.Pos) (data.ResourceSchema, bool) {
+	resource := data.Resource.Filter(w, data.ResourceSchema{
+		Position: position,
+	}, []string{"Position"})
+
+	if len(resource) == 0 {
+		return data.ResourceSchema{}, false
+	}
+	return data.Resource.Get(w, resource[0]), true
+}
+```
+
+We are able to simplify the request by only asking for the `PlayerId`, because we can easily get the `Position` and related information like `Resources` once we find the `PlayerSchema`.
+
+```go
+type MovePlayerRequest struct {
+	Direction helper.Direction `json:"direction"`
+	PlayerId  int              `json:"playerId"`
+}
+```
+
+Just like we did in the  `CreatePlayerSystem` , we `Filter` for players with the playerID, but this time to check whether the player the user is referring to exists.
+
+```go
+playerRes := data.Player.Filter(w,
+		data.PlayerSchema{
+			PlayerId: req.PlayerId,
+		}, []string{"PlayerId"}) // Explanation 1
+	if len(playerRes) == 0 {
+		ctx.EmitError("you have not created a player yet", []int{req.PlayerId})
+		return
+	}
+```
+
+`ValidateTileToMoveTo` confirms across different schemas (using, surprise, `Filter` !) that an object doesn’t exist at the position we are seeking to go to.
+
+```go
+func ValidateTileToMoveTo(w state.IWorld, pos state.Pos) bool {
+	if !WithinBoardBoundary(pos) {
+		return false
+	}
+
+	if players := data.Player.Filter(w, data.PlayerSchema{ // no players
+		Position: pos,
+	}, []string{"Position"}); len(players) != 0 {
+		return false
+	}
+
+	if animals := data.Animal.Filter(w, data.AnimalSchema{ // no animals
+		Position: pos,
+	}, []string{"Position"}); len(animals) != 0 {
+		return false
+	}
+
+	return !IsObstacleTile(w, pos) // no obstacles
+}
+```
+
+We pick up resources by:
+
+1. Adding the resource count to the game world and
+2. Deleting the resource object from the game world after we pick it up
+ 1. Deleting an object is done through the `RemoveEntity` function of the TableAccessor, which means you need to store the entity/find the entity through a `Filter` beforehand
+
+```go
+resource, found := resourceAtPosition(w, targetPos) // Explanation 3
+		if found {
+			data.Resource.RemoveEntity(w, resource.Id)
+			player.Resources += resource.Amount
+		}
+```
+
+---
+
+Two important parameters to consider when adding a system to the game are:
+
+1. **Game Tick rate**: ***************************************************How many milliseconds should pass between each tick***************************************************, set in the `TickRate`. This will be the limit to how fast tick events can be processed. We decided to have a `TickRate` of `20` milliseconds.
+2. ********************************************System Tick Interval:******************************************** *************************************************How many milliseconds should pass between each time we process jobs for the system*************************************************, set in the `TickInterval` of the `TickSystem` . Be careful about queuing jobs for the future, because if the system doesn’t tick on the exact tick you scheduled it on, then you are going to miss the update. As a good practice, make sure that the `TickRate` is a number that is easy to always be a multiple of, like `100` as we did in our game.
+
+We decided for simplicity that most systems should have a `TickInterval` matching the `TickRate`.

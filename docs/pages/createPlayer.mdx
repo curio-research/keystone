@@ -1,0 +1,96 @@
+# Creating the Player
+
+We want the user to be able to register a player to their client and see the moveable player in the actual game. In addition, this step should convey information needed for authentication in the future without passing any confidential information.
+
+## Objectives
+
+1. Create a player object and store that in the game state with the player’s public key
+2. Prevent any “1 to many” mappings from either public keys or `playerID`s to the actual player object
+
+Here is the complete CreatePlayerSystem, which we will be walking through
+
+```go
+type CreatePlayerRequest struct {
+	PlayerID           int    `json:"playerId"`
+	EthBase64PublicKey string `json:"ethBase64PublicKey"`
+}
+
+var CreatePlayerSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[CreatePlayerRequest]) {
+	w := ctx.W
+	req := ctx.Req.Data
+
+	playerID := req.PlayerID
+	_, found := PlayerWithID(w, req.PlayerID) // Uses filter on ID
+	if found {
+		ctx.EmitError(fmt.Sprintf("already created a player with player ID %v", playerID), []int{playerID})
+		return
+	}
+
+	publicKey := req.EthBase64PublicKey
+	_, found = PlayerWithPublicKey(w, publicKey) // Uses filter on public key
+	if found {
+		ctx.EmitError(fmt.Sprintf("already created a player with public key %s", publicKey), []int{playerID})
+		return
+	}
+
+	availablePos, ok := helper.RandomAvailablePosition(w) // Uses filter on open tiles with no existing animals/players on them
+	if !ok {
+		ctx.EmitError("this is awkward... there is no more space for a new player :(", []int{playerID})
+		return
+	}
+
+	data.Player.Add(w, data.PlayerSchema{
+		Position:           availablePos,
+		PlayerId:           playerID,
+		EthBase64PublicKey: req.EthBase64PublicKey,
+	})
+})
+```
+
+First, we declare the CreatePlayerRequest, which is the request that the clients will send to the server
+
+```go
+type CreatePlayerRequest struct {
+	PlayerID           int    `json:"playerId"`
+	EthBase64PublicKey string `json:"ethBase64PublicKey"`
+}
+```
+
+To create the system’s structure, we use the `CreateSystemFromRequestHandler` function with the `CreatePlayerRequest` type
+
+```go
+var CreatePlayerSystem = server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[CreatePlayerRequest]) {
+```
+
+To use the game world data and the request that the user sent over, we use the `ctx` variable provided out of the box.
+
+```go
+w := ctx.W
+req := ctx.Req.Data
+```
+
+We then check the game state to see whether the player has already been created before, or if a player with the same public key has been created.
+
+To get back that player within the helper functions, we can either use `Get` or `Filter`. Filter returns a list of entities.
+
+```go
+// #1. You already know the entity
+player := data.Player.Get(gameWorld, playerEntity)
+
+// #2. You know that the player is the only one with this player id
+playerEntities := data.Player.Filter(gameWorld, PlayerSchema{
+	PlayerId: 7,
+}, []string{"PlayerId"})
+player = data.Player.Get(gameWorld, playerEntities[0])
+
+// #3. You are filtering with as much information as possible
+playerEntities = data.Player.Filter(gameWorld, PlayerSchema{
+	PlayerId: 7,
+	EthBase64PublicKey: "abcdef",
+}, []string{"PlayerId", "EthBase64PublicKey"})
+player = data.Player.Get(gameWorld, players[0])
+```
+
+If there are already existing players, we can emit errors and additional events back  to the client through our websocket endpoint that the clients subscribe to. More support and details on emitting events will come soon.
+
+Finally, registering a player with a public key is as easy as just creating the actual player object. We can access this player using syntax such as:
