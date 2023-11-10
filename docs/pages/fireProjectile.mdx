@@ -2,7 +2,7 @@
 
 Now that we can move our player, let’s actually have some fun, shall we?
 
-## Objective
+## Objectives
 
 1. Create projectiles that get updated in position over time
 2. Prevent projectiles from going through obstacles/animals/players
@@ -90,12 +90,77 @@ var UpdateProjectileSystem = server.CreateSystemFromRequestHandler(func(ctx *ser
 })
 ```
 
-## Explanation
+##
 
-1. We get the position of the player and add a projectile in that location. We start the projectile from the position of a player since we can be sure that the projectile will be fine to start there.
-2. We queue a job to the `UpdateProjectileSystem` in `constants.BulletSpeed` more ticks.
- 1. In the `UpdateProjectileSystem`, we check for collisions using `Filter` and update the position of the projectile one more step in its intended direction if possible.
- 2. On collision, we apply the effects of the collision to the map, including the dropping of resources, or just the removal of the projectile entity.
+---
+
+We get the position of the player and add a projectile in that location. We start the projectile from the position of a player since we can be sure that the projectile will be fine to start there.
+
+```go
+direction := req.Direction
+	initialPosition, found := locationOfPlayer(w, req.PlayerId)
+	if !found {
+		return
+	}
+
+	projectileID := data.Projectile.Add(w, data.ProjectileSchema{ // Explanation 1
+		Position: initialPosition,
+	})
+```
+
+We queue a job to the `UpdateProjectileSystem` in `constants.BulletSpeed` more ticks.
+
+```go
+tickNumber := ctx.GameCtx.GameTick.TickNumber + constants.BulletSpeed
+
+	server.QueueTxFromInternal[UpdateProjectileRequest](w, tickNumber, server.NewKeystoneTx(UpdateProjectileRequest{ // Explanation 2
+		Direction:    direction,
+		ProjectileID: projectileID,
+		PlayerID:     req.PlayerId,
+	}, nil), "")
+}, VerifyWalletAndIdentity[FireProjectileRequest]())
+```
+
+In the `UpdateProjectileSystem`, we check for collisions using `Filter` and update the position of the projectile one more step in its intended direction if possible.
+
+```go
+collision := updateWorldForCollision(w, nextPosition) // uses filters for animals/players
+	if collision {
+		// if collided, remove the projectile
+		data.Projectile.RemoveEntity(w, req.ProjectileID)
+
+	} else {
+		// update the position of the projectile
+		projectile.Position = nextPosition
+		data.Projectile.Set(w, req.ProjectileID, projectile)
+
+		// queue the next projectile update
+		tickNumber := ctx.GameCtx.GameTick.TickNumber + constants.BulletSpeed
+
+		server.QueueTxFromInternal[UpdateProjectileRequest](w, tickNumber, server.NewKeystoneTx(UpdateProjectileRequest{
+			Direction:    req.Direction,
+			ProjectileID: req.ProjectileID,
+			PlayerID:     req.PlayerID,
+		}, nil), "")
+	}
+```
+
+- On collision, we apply the effects of the collision to the map, including the dropping of resources, or just the removal of the projectile entity.
+
+  ```go
+  players := playersAtLocation(w, position)
+  	if len(players) != 0 {
+  		collision = true
+  		for _, player := range players {
+  			data.Player.RemoveEntity(w, player)
+  		}
+  		data.Resource.Add(w, data.ResourceSchema{
+  			Position: position,
+  			Amount:   constants.PlayerGold,
+  		})
+  	}
+    ```
+
 
 It is usually best for design in general to have one system be responsible for one thing, whether that’s creating the projectile or updating its location. Although it is a bit weird to start a projectile in the same position as the player, it is a tradeoff we were willing to make.
 

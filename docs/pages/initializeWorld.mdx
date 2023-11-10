@@ -68,7 +68,7 @@ ctx.GinHttpEngine.POST("/endpoint", func(ginCtx *gin.Context) {
 
  3. `AddTables` - For all the data we need to store inside the game, we have to create a table for each type of data in the initialization of the game. You will see that the function actually takes in a `map[interface{}]*state.TableBaseAccessor[any]` instead of just a `[]interface{}`.
 
-We went over the benefit of having global `TableAccessor`s in a previous section to more easily access data. Another benefit is that they implement `ITable` so they can be used to add tables to the world. That is the reason why `AddTables` takes in a type of `map[interface{}]*state.TableBaseAccessor[any]` .
+One benefit of having global `TableAccessor`s is that they provide an easy way to access data. Another benefit is that they implement `ITable` so they can be used to add tables to the world. That is the reason why `AddTables` takes in a type of `map[interface{}]*state.TableBaseAccessor[any]` .
 
 ```go
 // schemas.go
@@ -84,8 +84,6 @@ var SchemaMapping = map[interface{}]*state.TableBaseAccessor[any]{
 	...
 }
 ```
-
-Note: Your requests should not be added as a schema here! These are only for structures storing game data, to be used in systems processing a request.
 
 ## Optional
 
