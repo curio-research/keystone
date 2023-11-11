@@ -7,3 +7,4 @@
 .idea
 
 test/test.db
+/server/proto/node_modules/

@@ -1,0 +1,11 @@
+{
+  "name": "proto",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "protoc-gen-js": "^3.21.2",
+    "ts-proto": "^1.164.0",
+    "ts-protoc-gen": "^0.15.0"
+  }
+}
