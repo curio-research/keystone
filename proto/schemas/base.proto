@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package pb_base;
+option go_package = "pb.base";
+
+enum TroopStackType {
+    Infantry=0;
+    Tank=1;
+    Fort=2;
+    Plane=3;
+}
+
+enum BuildingType {
+    TechCenter=0;
+    TradeCenter=1;
+    CapitalCenter=9999;
+}
+
+// Logic Position Struct
+message Position {
+    int32 X = 1;
+    int32 Y = 2;
+}
+
+// Every Stack's move plan
+message MovePlan {
+    TroopStack OriginalStack = 1;
+    TroopStack CurrentStack = 2;
+    repeated Position Path = 3;
+}
+
+// Game Round
+message Round {
+    int32 Count = 1;
+}
+
+message SimpleMovePlan {
+    int64 Id = 1;
+    int64 StackId = 2;
+    repeated Position Path = 3;
+}
+
+// Player Information
+message Player {
+    int64 Id = 1;
+    string Name = 2;
+    string Role = 3;
+}
+
+// Tile Infomation
+message Tile {
+    int64 Id = 1;
+    int64 OwnerId = 2;
+    int32 Level = 3;
+    Position Position = 4;
+    bool Visible = 5;
+}
+
+// Capital Information
+message Capital {
+    int64 Id = 1;
+    int64 OwnerId = 2;
+    int32 Level = 3;
+    Position Position = 4;
+}
+
+message Talent {
+    int64 Id = 1;
+    int64 OwnerId = 2;
+}
+
+// Building Information
+message Building {
+    int64 Id = 1;
+    int64 OwnerId = 2;
+    int32 Level = 3;
+    Position Position = 4;
+    BuildingType Type = 5;
+}
+
+// Troop Stack(A Group of troops in same type)
+message TroopStack {
+    int64 Id = 1;
+    int64 OwnerId = 2;
+    TroopStackType Type = 3;
+    int32 Amount = 4;
+    Position Position = 5;
+    int32 MovementStamina = 6;
+    int32 AttackStamina = 7;
+    int64 LoadedTroopId = 8;
+}
+
+// User Identity infomation to determine who is the player
+message IdentityPayload {
+    string JwtToken = 1;
+    int64 PlayerId = 2;
+}

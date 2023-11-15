@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package pb_battle;
+option go_package = "pb.battle";
+
+import "base.proto";
+
+// Tile Change Struct
+message LargeTileChange {
+    int64 TileId = 1;
+    int32 PreviousOwnerId = 2;
+    int32 NewOwnerId = 3;
+    int32 PreviousLevel = 4;
+    int32 NewLevel = 5;
+    bool PreviousVisible = 6;
+    bool NewVisible = 7;
+}
+
+// Troops Producing params
+message C2S_Produce {
+    pb_base.TroopStackType Type = 1;
+    int32 Amount = 2;
+    int64 TargetLargeTile = 3;
+    pb_base.IdentityPayload IdentityPayload = 4;
+}
+
+// Troops Producing Building params
+message C2S_ProduceBuilding {
+    pb_base.BuildingType Type = 1;
+    int64 TargetLargeTile = 2;
+    pb_base.IdentityPayload IdentityPayload = 3;
+}
+
+// Troops Movement params
+message C2S_MoveTroops {
+    repeated int64 TroopAmounts = 1;
+    repeated int64 StackIds = 2;
+    int64 TargetLargeTile = 3;
+    pb_base.IdentityPayload IdentityPayload = 4;
+}
+
+// Troops Attacking params
+message C2S_Attack {
+    int64 AttackerTileId = 1;
+    bool IsBombingAttack = 2;
+    int64 TargetTileId = 3;
+    pb_base.IdentityPayload IdentityPayload = 4;
+}
+
+// Set Tank Guard Mode
+message C2S_ToggleTankGuardMode {
+    int64 TankStackId = 1;
+    pb_base.IdentityPayload IdentityPayload = 2;
+}
+
+// Plane Load Troop
+message C2S_PlaneLoad {
+    int64 PlaneStackId = 1;
+    pb_base.TroopStack OnGroundStack=2;
+    pb_base.TroopStack CarriedStack=3;
+    pb_base.IdentityPayload IdentityPayload = 4;
+}
+
+// Plane Load Troop
+message C2S_PlaneUnload {
+    int64 PlaneStackId = 1;
+    pb_base.IdentityPayload IdentityPayload = 2;
+}
+
+// [non-blocking] Result of Troop Producing
+message S2C_Produce {
+    pb_base.TroopStack ProducedStack = 1;
+}
+
+// [non-blocking] Result of Troop Movement
+message S2C_CrossLargeTile {
+    int64 StackId = 1;
+    int64 PreviousTileId = 2;
+    int64 NewTileId = 3;
+}
+
+// [non-blocking] Result of Troop Movement Plan Path
+message S2C_MoveTroopsPlanningPath {
+    repeated pb_base.MovePlan MovePlans = 1;
+}
+
+// [non-blocking] Result of Troop Movement
+message S2C_MoveComplete {
+    pb_base.TroopStack MovedStack = 1;
+}
+
+// [non-blocking] When Troops move to same position, one troop stack remains, another troop will get merged
+message S2C_MergeTroops {
+    int64 MergedStackId = 1;
+    pb_base.TroopStack ExistingStack = 2;
+}
+
+// [non-blocking] Result of Troop Attack
+message S2C_Attack {
+    bool IsVictory = 1;
+    int64 AttackerId = 2;
+    repeated int64 StackIds = 3;     // winner stack ids
+    repeated int64 TroopAmounts = 4; // winner stack troop amounts
+}
+
+// [non-blocking] Result of Tile Metadata Change
+message S2C_LargeTileChange {
+    repeated LargeTileChange LargeTileChangeList = 1;
+}
+
+// [blocking] Result of setting tank guard mode
+message S2C_ToggleTankGuardMode {
+    int64 TankStackId = 1;
+    bool IsGuarding = 2;
+}
+
+// [non-blocking] Result of Building Producing
+message S2C_ProduceBuilding {
+    pb_base.Building ProducedBuilding = 1;
+}
+
+// [non-blocking] Result of Plane Load Troop
+message S2C_PlaneLoad {
+   pb_base.TroopStack PlaneStack = 1;
+   pb_base.TroopStack OriginalStack = 2;
+   pb_base.TroopStack LoadedStack = 3;
+}
+
+// [non-blocking] Result of Plane Unload Troop
+message S2C_PlaneUnload {
+   pb_base.TroopStack PlaneStack = 1;
+   int64 MergedStackId = 2;
+   pb_base.TroopStack GroundStack = 3;
+}

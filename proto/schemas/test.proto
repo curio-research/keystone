@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package pb_test;
+option go_package = "pb.test";
+
+import "base.proto";
+
+// Reset gameState directly, ignore all game rules
+message C2S_ResetGameState {
+  repeated pb_base.Player PlayerList = 1;
+  repeated pb_base.Tile TileList = 2;
+  repeated pb_base.TroopStack TroopStackList = 3;
+  repeated pb_base.Building BuildingList = 4;
+}
+
+// [blocking] Result of reset gameState
+message S2C_ResetGameState {
+  repeated pb_base.Player PlayerList = 1;
+  repeated pb_base.Tile TileList = 2;
+  repeated pb_base.TroopStack TroopStackList = 3;
+  repeated pb_base.Building BuildingList = 4;
+}
+
+// Message used in integration test
+message C2S_Test {
+  repeated TestBookInfo bookInfos = 1;
+  pb_base.IdentityPayload IdentityPayload = 2;
+}
+
+message TestBookInfo {
+  Operation op = 1;
+  string author = 2;
+  string title = 3;
+  int64 entity = 4;
+}
+
+enum Operation {
+  Add=0;
+  AddSpecific=1;
+  Remove=2;
+  Update=3;
+}
+
+message S2C_Test {
+  int64 entity = 1;
+}

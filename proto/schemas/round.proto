@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package pb_round;
+option go_package = "pb.round";
+
+import "base.proto";
+
+message C2S_DiscardCards {
+    repeated int64 PokerCards = 1;
+    pb_base.IdentityPayload IdentityPayload = 2;
+}
+
+
+message S2C_RoundStart {
+    int64 Round = 1;
+}
+
+message S2C_DiscardPhaseEnded {}
+
+message S2C_DiscardCards {
+    repeated int64 PokerCardIds = 1;
+}
+
+// end game
+message S2C_EndGame {
+    string RoomName = 1;
+    repeated Result Results = 2;
+}
+
+message Result {
+    string Username = 1;
+    int64 Elo = 2;
+}
