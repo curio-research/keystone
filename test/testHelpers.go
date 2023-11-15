@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"testing"
+
 	"github.com/curio-research/keystone/server"
 	"github.com/curio-research/keystone/server/startup"
 	"github.com/curio-research/keystone/state"
@@ -12,9 +16,6 @@ import (
 	"github.com/curio-research/keystone/utils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"strconv"
-	"testing"
 )
 
 var p *testutils.PortManager
@@ -77,7 +78,7 @@ type Person struct {
 }
 
 type Book struct {
-	Title   string
+	Title   string `key:"true"`
 	Author  string
 	OwnerID int
 	Id      int `gorm:"primaryKey;autoIncrement:false"`

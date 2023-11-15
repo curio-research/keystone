@@ -10,8 +10,29 @@ func NewQueryContext() *QueryContext {
 	}
 }
 
+// Clears a query context
 func (ctx *QueryContext) Clear() {
 	ctx.mappingCache = make(map[int]bool)
+}
+
+// Checks if query context includes a number
+func (ctx *QueryContext) Includes(num int) bool {
+	return ctx.mappingCache[num]
+}
+
+func (ctx *QueryContext) Add(num int) {
+	ctx.mappingCache[num] = true
+}
+
+// Get all values as int array
+func (ctx *QueryContext) GetAll() []int {
+	var nums []int
+	for num := range ctx.mappingCache {
+		if ctx.mappingCache[num] {
+			nums = append(nums, num)
+		}
+	}
+	return nums
 }
 
 func ArrayIntersectionWithContext(ctx *QueryContext, nums1, nums2 []int) []int {

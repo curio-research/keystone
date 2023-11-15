@@ -3,12 +3,13 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/curio-research/keystone/utils"
-	"github.com/golang-collections/collections/stack"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/curio-research/keystone/utils"
+	"github.com/golang-collections/collections/stack"
 )
 
 // ---------------------------------------
@@ -287,59 +288,123 @@ func (c *TableBaseAccessor[T]) Filter(w IWorld, filter T, fieldNames []string) [
 	return w.Filter(filter, fieldNames, c.Name())
 }
 
+func checkStructMatchFieldValues(fullStruct any, structWithValsToMatch any, fieldNamesToMatch []string) bool {
+
+	fullStructReflectVal := reflect.ValueOf(fullStruct)
+	structWithValsToMatchRefecectVal := reflect.ValueOf(structWithValsToMatch)
+
+	// check if the struct matches the field names
+	for _, fieldName := range fieldNamesToMatch {
+		fullStructFieldVal := fullStructReflectVal.FieldByName(fieldName).Interface()
+		structWithValsToMatchFieldVal := structWithValsToMatchRefecectVal.FieldByName(fieldName).Interface()
+
+		if fullStructFieldVal != structWithValsToMatchFieldVal {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Core filter query function
 func (t *Table) Filter(filter any, fieldNames []string) []int {
-	if len(fieldNames) == 0 {
-		return []int{}
-	}
 
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	// this needs to be an array
+	// queryCtx := NewQueryContext()
+	// var filteredEntities []int
 
-	v := reflect.ValueOf(filter)
+	// // loop through all fields to check if the field has a tag.
+	// // if there's a tag, fetch value and merge it with "res"
 
-	// if the query is only length 1, we can directly return
-	if len(fieldNames) == 1 {
-		fieldValue := v.FieldByName(fieldNames[0])
+	// // if not, skip values
+	// rt := reflect.TypeOf(filter)
+	// foundFirstIndexCache := false
+	// if rt.Kind() == reflect.Struct {
+	// 	for i := 0; i < rt.NumField(); i++ {
+	// 		field := rt.Field(i)
+	// 		_, keyExists := field.Tag.Lookup("key")
+	// 		if keyExists {
 
-		// search in the reverse mapping and register
-		fieldNameMapping := t.Indexes[fieldNames[0]]
+	// 			cachedEntities := t.Indexes[field.Name][tableKey(reflect.ValueOf(filter).Field(i))].GetAll()
 
-		// if the name doesn't exist (aka wrong field name), return nothing
-		if fieldNameMapping == nil {
-			return []int{}
-		}
+	// 			// first time found, register idx
+	// 			if !foundFirstIndexCache {
+	// 				filteredEntities = append(filteredEntities, cachedEntities...)
+	// 				foundFirstIndexCache = true
 
-		return t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
-	}
+	// 			} else {
 
-	// we take the first one first
-	fieldValue := v.FieldByName(fieldNames[0])
+	// 				filteredEntities = ArrayIntersectionWithContext(queryCtx, filteredEntities, cachedEntities)
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	var res []int = t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
+	var finalRes []int
 
-	queryCtx := NewQueryContext()
-
-	// we start search from the 2nd element
-	for i := 1; i < len(fieldNames); i++ {
-		fieldName := fieldNames[i]
-
-		fieldVal := v.FieldByName(fieldName)
-
-		fieldMapping := t.Indexes[fieldName]
-
-		// field doesn't exist
-		if fieldMapping == nil {
-			return []int{}
-		} else {
-			// value => return entities that match the value of this struct's field
-			valueSet := fieldMapping[tableKey(fieldVal)]
-
-			res = ArrayIntersectionWithContext(queryCtx, res, valueSet.GetAll())
+	// for every entity, fetch its value
+	// add to results if all fields match values in the Filter function
+	for _, entity := range t.Entities.GetAll() {
+		entityValue := t.EntityToValue[entity]
+		isMatch := checkStructMatchFieldValues(entityValue, filter, fieldNames)
+		if isMatch {
+			finalRes = append(finalRes, entity)
 		}
 	}
 
-	return res
+	return finalRes
+
+	// if len(fieldNames) == 0 {
+	// 	return []int{}
+	// }
+
+	// t.mu.Lock()
+	// defer t.mu.Unlock()
+
+	// v := reflect.ValueOf(filter)
+
+	// // if the query is only length 1, we can directly return
+	// if len(fieldNames) == 1 {
+	// 	fieldValue := v.FieldByName(fieldNames[0])
+
+	// 	// search in the reverse mapping and register
+	// 	fieldNameMapping := t.Indexes[fieldNames[0]]
+
+	// 	// if the name doesn't exist (aka wrong field name), return nothing
+	// 	if fieldNameMapping == nil {
+	// 		return []int{}
+	// 	}
+
+	// 	return t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
+	// }
+
+	// // we take the first one first
+	// fieldValue := v.FieldByName(fieldNames[0])
+
+	// var res []int = t.Indexes[fieldNames[0]][tableKey(fieldValue)].GetAll()
+
+	// queryCtx := NewQueryContext()
+
+	// // we start search from the 2nd element
+	// for i := 1; i < len(fieldNames); i++ {
+	// 	fieldName := fieldNames[i]
+
+	// 	fieldVal := v.FieldByName(fieldName)
+
+	// 	fieldMapping := t.Indexes[fieldName]
+
+	// 	// field doesn't exist
+	// 	if fieldMapping == nil {
+	// 		return []int{}
+	// 	} else {
+	// 		// value => return entities that match the value of this struct's field
+	// 		valueSet := fieldMapping[tableKey(fieldVal)]
+
+	// 		res = ArrayIntersectionWithContext(queryCtx, res, valueSet.GetAll())
+	// 	}
+	// }
+
+	// return res
 }
 
 func tableKey(val reflect.Value) string {
