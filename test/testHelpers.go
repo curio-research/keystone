@@ -79,7 +79,7 @@ type Person struct {
 
 type Book struct {
 	Title   string `key:"true"`
-	Author  string
+	Author  string `key:"true"`
 	OwnerID int
 	Id      int `gorm:"primaryKey;autoIncrement:false"`
 }

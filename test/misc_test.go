@@ -35,17 +35,35 @@ func TestEmptyQuerySpeed(t *testing.T) {
 func TestQuerySpeed(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
+	fmt.Println(3)
+	fmt.Println("--------------------")
+
 	// testing query through different methods
-	counts := []int{10, 100, 1000, 10000, 100000, 200000, 300000}
+	// counts := []int{10, 100, 1000, 10000, 100000, 200000, 300000}
+	counts := []int{300_000}
 
 	for _, count := range counts {
 		ctx, _, _, _, _ := startTestServer(t, server.Dev)
 
 		// populate world with troops
-		for i := 0; i < count; i++ {
+		for i := 0; i < 100_000; i++ {
 			bookTable.Add(ctx.World, Book{
 				Title:   "a",
+				Author:  "bc",
+				OwnerID: i,
+			})
+		}
+		for i := 0; i < 100_000; i++ {
+			bookTable.Add(ctx.World, Book{
+				Title:   "123123",
 				Author:  "b",
+				OwnerID: i,
+			})
+		}
+		for i := 0; i < count; i++ {
+			bookTable.Add(ctx.World, Book{
+				Title:   "123sd",
+				Author:  "asef",
 				OwnerID: i,
 			})
 		}

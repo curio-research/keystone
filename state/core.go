@@ -75,38 +75,43 @@ func (t *Table) Set(w *GameWorld, entity int, value any) any {
 	prevVal := t.EntityToValue[entity]
 	_prevV := reflect.ValueOf(prevVal)
 
+	// set to main entityToValue mapping
 	t.EntityToValue[entity] = value
 
 	reflectVal := reflect.ValueOf(value)
 	reflectType := reflect.ValueOf(value).Type()
 
-	// register reverse mappings
+	// register reverse mappings only for fields that have key tags
 	for i := 0; i < reflectVal.NumField(); i++ {
 		field := reflectType.Field(i)
-		fieldValue := reflectVal.Field(i)
 
-		fieldNameMapping := t.Indexes[field.Name]
+		_, keyExists := field.Tag.Lookup("key")
+		if keyExists {
+			fieldValue := reflectVal.Field(i)
 
-		if fieldNameMapping == nil {
-			fieldNameMapping = make(map[string]*SparseSet)
-			t.Indexes[field.Name] = fieldNameMapping
+			fieldNameMapping := t.Indexes[field.Name]
+
+			if fieldNameMapping == nil {
+				fieldNameMapping = make(map[string]*SparseSet)
+				t.Indexes[field.Name] = fieldNameMapping
+			}
+
+			// remove value => entity mapping for the previous value if the old value exists
+			if prevVal != nil {
+				prevFieldValue := _prevV.Field(i)
+				fieldNameMapping[tableKey(prevFieldValue)].Remove(entity)
+			}
+
+			// create new set if not present
+
+			key := tableKey(fieldValue)
+			if fieldNameMapping[key] == nil {
+				fieldNameMapping[key] = NewSparseSet()
+			}
+
+			// add value
+			fieldNameMapping[key].Add(entity)
 		}
-
-		// remove value => entity mapping for the previous value if the old value exists
-		if prevVal != nil {
-			prevFieldValue := _prevV.Field(i)
-			fieldNameMapping[tableKey(prevFieldValue)].Remove(entity)
-		}
-
-		// create new set if not present
-
-		key := tableKey(fieldValue)
-		if fieldNameMapping[key] == nil {
-			fieldNameMapping[key] = NewSparseSet()
-		}
-
-		// add value
-		fieldNameMapping[key].Add(entity)
 	}
 
 	update := TableUpdate{Entity: entity, Table: t.Name, Value: value, OP: UpdateOP, Time: time.Now().Unix()}
@@ -288,69 +293,126 @@ func (c *TableBaseAccessor[T]) Filter(w IWorld, filter T, fieldNames []string) [
 	return w.Filter(filter, fieldNames, c.Name())
 }
 
-func checkStructMatchFieldValues(fullStruct any, structWithValsToMatch any, fieldNamesToMatch []string) bool {
-
+func checkStructMatchFieldValues(fullStruct any, structWithValsToMatch any, fieldNamesToMatch []string, fieldIndex FieldIndexes) bool {
 	fullStructReflectVal := reflect.ValueOf(fullStruct)
-	structWithValsToMatchRefecectVal := reflect.ValueOf(structWithValsToMatch)
+	structWithValsToMatchReflectVal := reflect.ValueOf(structWithValsToMatch)
 
-	// check if the struct matches the field names
 	for _, fieldName := range fieldNamesToMatch {
-		fullStructFieldVal := fullStructReflectVal.FieldByName(fieldName).Interface()
-		structWithValsToMatchFieldVal := structWithValsToMatchRefecectVal.FieldByName(fieldName).Interface()
+		idx, ok := fieldIndex[fieldName]
+		if !ok {
+			continue // or return an error if this is unexpected
+		}
 
-		if fullStructFieldVal != structWithValsToMatchFieldVal {
+		fullStructFieldVal := fullStructReflectVal.Field(idx)
+		structWithValsToMatchFieldVal := structWithValsToMatchReflectVal.Field(idx)
+
+		// Compare values directly if possible
+		if fullStructFieldVal.Interface() != structWithValsToMatchFieldVal.Interface() {
 			return false
 		}
 	}
 
 	return true
+
+	// fullStructReflectVal := reflect.ValueOf(fullStruct)
+	// structWithValsToMatchRefecectVal := reflect.ValueOf(structWithValsToMatch)
+
+	// // check if the struct matches the field names
+	// for _, fieldName := range fieldNamesToMatch {
+	// 	fullStructFieldVal := fullStructReflectVal.FieldByName(fieldName).Interface()
+	// 	structWithValsToMatchFieldVal := structWithValsToMatchRefecectVal.FieldByName(fieldName).Interface()
+
+	// 	if fullStructFieldVal != structWithValsToMatchFieldVal {
+	// 		return false
+	// 	}
+	// }
+
+	// return true
+}
+
+type FieldIndexes map[string]int
+
+func BuildFieldIndexes(s interface{}) FieldIndexes {
+	t := reflect.TypeOf(s)
+	indexes := make(FieldIndexes)
+	for i := 0; i < t.NumField(); i++ {
+		indexes[t.Field(i).Name] = i
+	}
+	return indexes
+}
+
+func arrayIncludes(arr []string, target string) bool {
+	for _, val := range arr {
+		if val == target {
+			return true
+		}
+	}
+	return false
 }
 
 // Core filter query function
 func (t *Table) Filter(filter any, fieldNames []string) []int {
 
 	// this needs to be an array
-	// queryCtx := NewQueryContext()
-	// var filteredEntities []int
+	queryCtx := NewQueryContext()
+	var filteredEntities []int
 
-	// // loop through all fields to check if the field has a tag.
-	// // if there's a tag, fetch value and merge it with "res"
+	// loop through all fields to check if the field has a tag.
+	// if there's a tag, fetch value and merge it with "res"
 
-	// // if not, skip values
-	// rt := reflect.TypeOf(filter)
-	// foundFirstIndexCache := false
-	// if rt.Kind() == reflect.Struct {
-	// 	for i := 0; i < rt.NumField(); i++ {
-	// 		field := rt.Field(i)
-	// 		_, keyExists := field.Tag.Lookup("key")
-	// 		if keyExists {
+	a := time.Now()
 
-	// 			cachedEntities := t.Indexes[field.Name][tableKey(reflect.ValueOf(filter).Field(i))].GetAll()
+	// if not, skip values
+	rt := reflect.TypeOf(filter)
+	foundFirstIndexCache := false
+	if rt.Kind() == reflect.Struct {
+		for i := 0; i < rt.NumField(); i++ {
+			field := rt.Field(i)
+			if arrayIncludes(fieldNames, field.Name) {
 
-	// 			// first time found, register idx
-	// 			if !foundFirstIndexCache {
-	// 				filteredEntities = append(filteredEntities, cachedEntities...)
-	// 				foundFirstIndexCache = true
+				_, keyExists := field.Tag.Lookup("key")
+				if keyExists {
 
-	// 			} else {
+					cachedEntities := t.Indexes[field.Name][tableKey(reflect.ValueOf(filter).Field(i))].GetAll()
 
-	// 				filteredEntities = ArrayIntersectionWithContext(queryCtx, filteredEntities, cachedEntities)
-	// 			}
-	// 		}
-	// 	}
-	// }
+					fmt.Println(len(cachedEntities))
+
+					// first time found, register idx
+					if !foundFirstIndexCache {
+						fmt.Println("here")
+						filteredEntities = append(filteredEntities, cachedEntities...)
+						foundFirstIndexCache = true
+
+					} else {
+						fmt.Println("2")
+
+						filteredEntities = ArrayIntersectionWithContext(queryCtx, filteredEntities, cachedEntities)
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Println("INSIDE 1 : ", time.Since(a))
 
 	var finalRes []int
+	fieldIndex := BuildFieldIndexes(filter)
+
+	startTime := time.Now()
+
+	fmt.Println("Filtered entities len: ", len(filteredEntities))
 
 	// for every entity, fetch its value
 	// add to results if all fields match values in the Filter function
-	for _, entity := range t.Entities.GetAll() {
+	for _, entity := range filteredEntities {
 		entityValue := t.EntityToValue[entity]
-		isMatch := checkStructMatchFieldValues(entityValue, filter, fieldNames)
+		isMatch := checkStructMatchFieldValues(entityValue, filter, fieldNames, fieldIndex)
 		if isMatch {
 			finalRes = append(finalRes, entity)
 		}
 	}
+
+	fmt.Println("INSIDE 2 : ", time.Since(startTime))
 
 	return finalRes
 
@@ -407,6 +469,7 @@ func (t *Table) Filter(filter any, fieldNames []string) []int {
 	// return res
 }
 
+// Key to a table
 func tableKey(val reflect.Value) string {
 	v, _ := json.Marshal(val.Interface())
 	return string(v)
