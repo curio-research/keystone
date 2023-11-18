@@ -40,6 +40,7 @@ var (
 	testEntity1 = 69
 	testEntity2 = 70
 	testEntity3 = 71
+	testEntity4 = 72
 
 	testWallet1 = "wallet1"
 	testWallet2 = "wallet2"

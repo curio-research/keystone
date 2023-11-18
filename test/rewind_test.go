@@ -3,6 +3,8 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/curio-research/keystone/server/startup"
+	"github.com/curio-research/keystone/state"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,7 +40,12 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	ctx.SetGameLiveliness(true)
 
 	player1Entity := testEntity1
-	book1Entity, book2Entity := testEntity2, testEntity3
+	book1Entity, book2Entity, book3Entity := testEntity2, testEntity3, testEntity4
+
+	initWorld := func(w *state.GameWorld) {
+		bookTable.AddSpecific(w, testEntity4, Book{Title: testBookTitle3, Author: testBookAuthor3})
+	}
+	startup.RegisterRewindEndpoint(ctx, initWorld)
 
 	// second 1
 	server.QueueTxFromExternal(ctx, server.NewKeystoneTx(&pb_test.C2S_Test{ // at tick 2
@@ -94,7 +101,6 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 
 	time.Sleep(time.Second * 2)
 
-	resetWorldAndTick(ctx)
 	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 1,
 		GameId:         testGameID1,
@@ -108,7 +114,10 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	assert.Equal(t, testBookTitle2, book2.Title)
 	assert.Equal(t, testBookAuthor2, book2.Author)
 
-	resetWorldAndTick(ctx)
+	book3 := bookTable.Get(ctx.World, book3Entity)
+	assert.Equal(t, testBookTitle3, book3.Title)
+	assert.Equal(t, testBookAuthor3, book3.Author)
+
 	sendPostRequest(t, s, "rewindState", server.NewKeystoneTx(server.RewindStateRequest{
 		ElapsedSeconds: 10,
 		GameId:         ctx.GameId,
@@ -120,6 +129,10 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	book2 = bookTable.Get(ctx.World, book2Entity)
 	assert.Equal(t, testBookTitle1, book2.Title)
 	assert.Equal(t, testBookAuthor2, book2.Author)
+
+	book3 = bookTable.Get(ctx.World, book3Entity)
+	assert.Equal(t, testBookTitle3, book3.Title)
+	assert.Equal(t, testBookAuthor3, book3.Author)
 }
 
 func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data server.KeystoneTx[T]) *http.Response {
@@ -135,17 +148,4 @@ func sendPostRequest[T any](t *testing.T, s *http.Server, route string, data ser
 	require.Nil(t, err)
 
 	return resp
-}
-
-func resetWorldAndTick(ctx *server.EngineCtx) {
-
-	w := ctx.World
-	for _, table := range w.Tables {
-		entities := table.Entities.GetAll()
-		for _, entity := range entities {
-			table.RemoveEntity(w, entity)
-		}
-	}
-
-	ctx.GameTick.TickNumber = 1
 }
