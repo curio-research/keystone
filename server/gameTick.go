@@ -222,6 +222,28 @@ func (g *GameTick) Start(ctx *EngineCtx) {
 	quit := make(chan struct{})
 
 	go func() {
+		defer func() {
+
+			// game loop recovery function
+			if r := recover(); r != nil {
+				fmt.Println("Panic in game tick loop, recovering... ", r)
+
+				// TODO: restore
+				if ctx.SaveStateRate != 0 {
+					ctx.AddStateUpdatesToSave()
+				}
+
+				DeleteAllTicksAtTickNumber(ctx.World, g.TickNumber)
+				ctx.AddTransactionsToSave()
+
+				// increase tick number so the same ticks aren't being executed again
+				g.TickNumber++
+
+				// Restart the game tick process
+				go g.Start(ctx)
+			}
+		}()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -232,6 +254,10 @@ func (g *GameTick) Start(ctx *EngineCtx) {
 						if ShouldTriggerTick(g.TickNumber, g.TickRateMs, tickSystem.TickInterval) {
 							tickSystem.TickFunction(ctx)
 						}
+					}
+
+					if ctx.SaveStateRate != 0 {
+						ctx.AddStateUpdatesToSave()
 					}
 
 					ctx.AddStateUpdatesToSave()
@@ -288,7 +314,8 @@ func GetTickTransactionsOfType(w *state.GameWorld, transactionType string, tickN
 // get tick transactions of type at a current tick number
 func GetSystemTransactionsOfType[T any](ctx *EngineCtx) []int {
 	var t T
-	return GetTickTransactionsOfType(ctx.World, reflect.TypeOf(t).String(), ctx.GameTick.TickNumber)
+	s := reflect.TypeOf(t).String()
+	return GetTickTransactionsOfType(ctx.World, s, ctx.GameTick.TickNumber)
 }
 
 func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
@@ -299,8 +326,8 @@ func GetTransactionsAtTickNumber(w *state.GameWorld, tickNumber int) []int {
 }
 
 // queue transactions that are internal (ex: move planning)
-func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data KeystoneTx[T], tickId string) error {
-	return QueueTxAtTime(w, tickNumber, data, tickId, false)
+func QueueTxFromInternal[T any](w state.IWorld, tickNumber int, data T, tickId string) error {
+	return QueueTxAtTime(w, tickNumber, NewKeystoneTx(data, nil), tickId, false)
 }
 
 // queue transactions that are user-initiated aka external
