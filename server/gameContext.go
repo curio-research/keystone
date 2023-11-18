@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,6 +37,9 @@ type EngineCtx struct {
 	// Gin HTTP server
 	GinHttpEngine *gin.Engine
 
+	// HTTP Server
+	httpServer *http.Server
+
 	// HTTP port
 	HttpPort int
 
@@ -47,9 +51,11 @@ type EngineCtx struct {
 
 	// Handles interactions for saving stae
 	ShouldSaveState  bool
+	SaveStateRate    int
 	SaveStateHandler ISaveState
 
 	ShouldSaveTransactions  bool
+	SaveTransactionRate     int
 	SaveTransactionsHandler ISaveTransactions
 
 	// Implementations on how to broadcast events and errors
@@ -136,6 +142,10 @@ func (ctx *EngineCtx) ClearTransactionsToSave() {
 	ctx.TransactionsToSave = []TransactionSchema{}
 }
 
+func (ctx *EngineCtx) SetSaveStateRate(rate int) {
+	ctx.SaveStateRate = rate
+}
+
 func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
 	newTransactions := make([]TransactionSchema, len(transactions))
 	copy(newTransactions, transactions)
@@ -186,6 +196,11 @@ func (ctx *EngineCtx) SetTickRate(tickRateMs int) {
 	ctx.GameTick.TickRateMs = tickRateMs
 }
 
+// Get tick rate (milliseconds)
+func (ctx *EngineCtx) TickRate() int {
+	return ctx.GameTick.TickRateMs
+}
+
 // Set websocket port
 func (ctx *EngineCtx) SetWebsocketPort(port int) {
 	ctx.Stream.Port = port
@@ -216,6 +231,15 @@ func (ctx *EngineCtx) SetPort(port int) {
 // Set rate of streaming packets to clients (milliseconds)
 func (ctx *EngineCtx) SetStreamRate(rate int) {
 	ctx.Stream.StreamInterval = rate
+}
+
+// Set mode of engine (prod/dev)
+func (ctx *EngineCtx) SetMode(mode GameMode) {
+	ctx.Mode = mode
+}
+
+func (ctx *EngineCtx) HTTPServer() *http.Server {
+	return ctx.httpServer
 }
 
 // Start Keystone game server
@@ -277,8 +301,9 @@ func (ctx *EngineCtx) Start() {
 		fmt.Println("no tables registered")
 	}
 
-	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
-
+	go func() {
+		log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
+	}()
 }
 
 func padStringToLength(inputStr string, desiredLength int) string {
