@@ -52,7 +52,6 @@ func Server(t *testing.T, mode server.GameMode, websocketPort int, schemaToTable
 
 		ctx.SetSaveStateHandler(saveStateHandler, saveInterval)
 		ctx.SetSaveTxHandler(saveTxHandler, saveInterval)
-		startup.RegisterRewindEndpoint(ctx)
 
 		ctx.SetSaveState(true)
 		ctx.SetSaveTx(true)

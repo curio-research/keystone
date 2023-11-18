@@ -55,8 +55,8 @@ func NewGameEngine() *server.EngineCtx {
 	return ctx
 }
 
-func RegisterRewindEndpoint(ctx *server.EngineCtx) {
-	ctx.GinHttpEngine.POST("/rewindState", server.HandleRewindState(ctx))
+func RegisterRewindEndpoint(ctx *server.EngineCtx, initWorld func(w *state.GameWorld)) {
+	ctx.GinHttpEngine.POST("/rewindState", server.HandleRewindState(ctx, initWorld))
 }
 
 func RegisterGetStateEndpoint(ctx *server.EngineCtx) {
