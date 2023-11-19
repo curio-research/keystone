@@ -47,9 +47,11 @@ type EngineCtx struct {
 
 	// Handles interactions for saving stae
 	ShouldSaveState  bool
+	SaveStateRate    int
 	SaveStateHandler ISaveState
 
 	ShouldSaveTransactions  bool
+	SaveTransactionRate     int
 	SaveTransactionsHandler ISaveTransactions
 
 	// Implementations on how to broadcast events and errors
@@ -126,14 +128,24 @@ func (ctx *EngineCtx) ClearStateUpdatesToSave() {
 	ctx.PendingStateUpdatesToSave = []state.TableUpdate{}
 }
 
-// set whether game is live or not
+// Set whether game is live or not
 func (ctx *EngineCtx) SetGameLiveliness(isLive bool) {
 	ctx.IsLive = isLive
 }
 
-// clear transactions to save
+// Clear transactions to save
 func (ctx *EngineCtx) ClearTransactionsToSave() {
 	ctx.TransactionsToSave = []TransactionSchema{}
+}
+
+// Sets the interval to save state
+func (ctx *EngineCtx) SetSaveStateRate(rate int) {
+	ctx.SaveStateRate = rate
+}
+
+// Sets the interval to save transactions
+func (ctx *EngineCtx) SetSaveTransactionRate(rate int) {
+	ctx.SaveTransactionRate = rate
 }
 
 func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
@@ -157,6 +169,8 @@ func (ctx *EngineCtx) AddTables(tables map[interface{}]*state.TableBaseAccessor[
 // Set save state handler
 func (ctx *EngineCtx) SetSaveStateHandler(saveStateHandler ISaveState, saveInterval time.Duration) {
 	ctx.SaveStateHandler = saveStateHandler
+
+	// ctx.SetSaveStateRate(int(saveInterval))
 	SetupSaveStateLoop(ctx, saveInterval)
 }
 
@@ -184,6 +198,11 @@ func (ctx *EngineCtx) SetEmitErrorHandler(errorHandler ISystemErrorHandler) {
 // Set tick rate (milliseconds)
 func (ctx *EngineCtx) SetTickRate(tickRateMs int) {
 	ctx.GameTick.TickRateMs = tickRateMs
+}
+
+// Get tick rate (milliseconds)
+func (ctx *EngineCtx) TickRate() int {
+	return ctx.GameTick.TickRateMs
 }
 
 // Set websocket port
@@ -216,6 +235,11 @@ func (ctx *EngineCtx) SetPort(port int) {
 // Set rate of streaming packets to clients (milliseconds)
 func (ctx *EngineCtx) SetStreamRate(rate int) {
 	ctx.Stream.StreamInterval = rate
+}
+
+// Set mode of engine (prod/dev)
+func (ctx *EngineCtx) SetMode(mode GameMode) {
+	ctx.Mode = mode
 }
 
 // Start Keystone game server
@@ -277,8 +301,9 @@ func (ctx *EngineCtx) Start() {
 		fmt.Println("no tables registered")
 	}
 
-	log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
-
+	go func() {
+		log.Fatal(ctx.GinHttpEngine.Run(":" + strconv.Itoa(ctx.HttpPort)))
+	}()
 }
 
 func padStringToLength(inputStr string, desiredLength int) string {
