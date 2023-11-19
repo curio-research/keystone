@@ -128,18 +128,24 @@ func (ctx *EngineCtx) ClearStateUpdatesToSave() {
 	ctx.PendingStateUpdatesToSave = []state.TableUpdate{}
 }
 
-// set whether game is live or not
+// Set whether game is live or not
 func (ctx *EngineCtx) SetGameLiveliness(isLive bool) {
 	ctx.IsLive = isLive
 }
 
-// clear transactions to save
+// Clear transactions to save
 func (ctx *EngineCtx) ClearTransactionsToSave() {
 	ctx.TransactionsToSave = []TransactionSchema{}
 }
 
+// Sets the interval to save state
 func (ctx *EngineCtx) SetSaveStateRate(rate int) {
 	ctx.SaveStateRate = rate
+}
+
+// Sets the interval to save transactions
+func (ctx *EngineCtx) SetSaveTransactionRate(rate int) {
+	ctx.SaveTransactionRate = rate
 }
 
 func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
@@ -163,6 +169,8 @@ func (ctx *EngineCtx) AddTables(tables map[interface{}]*state.TableBaseAccessor[
 // Set save state handler
 func (ctx *EngineCtx) SetSaveStateHandler(saveStateHandler ISaveState, saveInterval time.Duration) {
 	ctx.SaveStateHandler = saveStateHandler
+
+	// ctx.SetSaveStateRate(int(saveInterval))
 	SetupSaveStateLoop(ctx, saveInterval)
 }
 
