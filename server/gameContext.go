@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,9 +35,6 @@ type EngineCtx struct {
 
 	// Gin HTTP server
 	GinHttpEngine *gin.Engine
-
-	// HTTP Server
-	httpServer *http.Server
 
 	// HTTP port
 	HttpPort int
@@ -236,10 +232,6 @@ func (ctx *EngineCtx) SetStreamRate(rate int) {
 // Set mode of engine (prod/dev)
 func (ctx *EngineCtx) SetMode(mode GameMode) {
 	ctx.Mode = mode
-}
-
-func (ctx *EngineCtx) HTTPServer() *http.Server {
-	return ctx.httpServer
 }
 
 // Start Keystone game server
