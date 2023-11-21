@@ -43,7 +43,7 @@ type EngineCtx struct {
 	TransactionsToSaveLock sync.Mutex
 
 	// Transactions to be stored in the data availability layer (aka a write ahead log basically)
-	TransactionsToSave []TransactionSchema
+	TransactionChan chan TransactionSchema
 
 	// Handles interactions for saving stae
 	ShouldSaveState  bool
@@ -68,7 +68,7 @@ type EngineCtx struct {
 	StateUpdatesMutex sync.Mutex
 
 	// State updates
-	PendingStateUpdatesToSave []state.TableUpdate
+	StateUpdateChan chan []state.TableUpdate
 }
 
 // for debugging
@@ -94,15 +94,6 @@ func PrintErrorLog(ctx *EngineCtx) {
 	fmt.Println()
 }
 
-// add a transactions that needs to be saved
-func (ctx *EngineCtx) AddTransactionToSave(transaction TransactionSchema, tick int) error {
-	ctx.TransactionsToSaveLock.Lock()
-	defer ctx.TransactionsToSaveLock.Unlock()
-
-	ctx.TransactionsToSave = append(ctx.TransactionsToSave, transaction)
-	return nil
-}
-
 func (ctx *EngineCtx) AddTransactionsToSave() {
 	tickNumber := ctx.GameTick.TickNumber
 
@@ -112,34 +103,29 @@ func (ctx *EngineCtx) AddTransactionsToSave() {
 
 		// only add external transactions aka ones from user requests
 		if transaction.IsExternal {
-			ctx.AddTransactionToSave(transaction, tickNumber)
+			ctx.addTransactionToSave(transaction)
 		}
 	}
 }
 
-// add to the list of state updates to save to database
-func (ctx *EngineCtx) AddStateUpdatesToSave() {
-	ctx.PendingStateUpdatesToSave = append(ctx.PendingStateUpdatesToSave, ctx.World.TableUpdates...)
+// add a transactions that needs to be saved
+func (ctx *EngineCtx) addTransactionToSave(transaction TransactionSchema) error {
+	ctx.TransactionsToSaveLock.Lock()
+	defer ctx.TransactionsToSaveLock.Unlock()
+
+	ctx.TransactionChan <- transaction
+	return nil
 }
 
-func (ctx *EngineCtx) ClearStateUpdatesToSave() {
-	ctx.PendingStateUpdatesToSave = []state.TableUpdate{}
+// add to the list of state updates to save to database
+func (ctx *EngineCtx) FlushStateUpdates() {
+	ctx.StateUpdateChan <- ctx.World.TableUpdates
+	ctx.World.ClearTableUpdates()
 }
 
 // set whether game is live or not
 func (ctx *EngineCtx) SetGameLiveliness(isLive bool) {
 	ctx.IsLive = isLive
-}
-
-// clear transactions to save
-func (ctx *EngineCtx) ClearTransactionsToSave() {
-	ctx.TransactionsToSave = []TransactionSchema{}
-}
-
-func CopyTransactions(transactions []TransactionSchema) []TransactionSchema {
-	newTransactions := make([]TransactionSchema, len(transactions))
-	copy(newTransactions, transactions)
-	return newTransactions
 }
 
 // Set game ID

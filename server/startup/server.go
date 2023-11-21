@@ -46,6 +46,7 @@ func NewGameEngine() *server.EngineCtx {
 		HttpPort:               server.DefaultServerPort,
 		ShouldSaveState:        false,
 		ShouldSaveTransactions: false,
+		StateUpdateChan:        make(chan []state.TableUpdate, server.DefaultChannelBuffer),
 	}
 
 	// Use protobuf based handlers as default
