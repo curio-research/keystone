@@ -40,7 +40,7 @@ func coreTestSaveStateHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveSt
 
 	gameEngine := initializeTestWorld(addVarsSystem)
 	server.TickWorldForward(gameEngine, 1)
-	require.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	require.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateChan))
 
 	newGameEngine := initializeTestWorld()
 	newGw := newGameEngine.World
@@ -85,10 +85,10 @@ func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQ
 
 	gameEngine := initializeTestWorld(addVarsSystem)
 	server.TickWorldForward(gameEngine, 1)
-	assert.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	assert.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateChan))
 
 	server.TickWorldForward(gameEngine, 1)
-	assert.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	assert.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateChan))
 
 	newGameEngine := initializeTestWorld()
 	newGw := newGameEngine.World
@@ -144,7 +144,7 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 
 	gameEngine := initializeTestWorld(addVarsSystem)
 	server.TickWorldForward(gameEngine, 1)
-	require.Nil(t, saveStateHandler.SaveState(gameEngine.PendingStateUpdatesToSave))
+	require.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateChan))
 
 	newGameEngine := initializeTestWorld()
 	newGw := newGameEngine.World
@@ -258,7 +258,7 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 
 	// apply transactions to the world
 	server.TickWorldForward(initialGameEngine, 3)
-	require.Nil(t, saveTxHandler.SaveTransactions(initialGameEngine.TransactionsToSave))
+	require.Nil(t, saveTxHandler.SaveTransactions(getAllTx(initialGameEngine)))
 
 	// reinitializing tick 1
 	newCtx, newGw := newGameEngine(t)
@@ -340,8 +340,8 @@ func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.MySQ
 	server.TickWorldForward(game1, 1)
 	server.TickWorldForward(game2, 1)
 
-	game1.SaveStateHandler.SaveState(game1.PendingStateUpdatesToSave)
-	game2.SaveStateHandler.SaveState(game2.PendingStateUpdatesToSave)
+	game1.SaveStateHandler.SaveState(<-game1.StateUpdateChan)
+	game2.SaveStateHandler.SaveState(<-game2.StateUpdateChan)
 
 	newGameEngine1 := initializeTestWorld()
 	newGw1 := newGameEngine1.World
@@ -417,8 +417,8 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 
 	server.TickWorldForward(game1, 2)
 
-	game1.SaveTransactionsHandler.SaveTransactions(game1.TransactionsToSave)
-	game2.SaveTransactionsHandler.SaveTransactions(game2.TransactionsToSave)
+	game1.SaveTransactionsHandler.SaveTransactions(getAllTx(game1))
+	game2.SaveTransactionsHandler.SaveTransactions(getAllTx(game2))
 
 	newGameEngine1 := newGameEngine(t, game1System, "")
 	newGameEngine2 := newGameEngine(t, game2System, "")
@@ -451,4 +451,14 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 	player3 := personTable.Get(newGameEngine2.World, testEntity2)
 	assert.Equal(t, testName1, player3.Name)
 	assert.Equal(t, testWallet2, player3.MainWallet)
+}
+
+func getAllTx(ctx *server.EngineCtx) []server.TransactionSchema {
+	txs := []server.TransactionSchema{}
+	txCounter := len(ctx.TransactionChan)
+	for i := 0; i < txCounter; i++ {
+		txs = append(txs, <-ctx.TransactionChan)
+	}
+
+	return txs
 }

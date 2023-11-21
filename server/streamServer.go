@@ -97,7 +97,6 @@ func NewStreamServer() *StreamServer {
 	s.Port = DefaultWebsocketPort
 	s.Conns = make(map[*websocket.Conn]ConnectionType)
 	s.PlayerIdToConnection = make(map[int]*websocket.Conn)
-	s.ProtoBufPacketsMutex = sync.Mutex{}
 	s.StreamInterval = int(defaultStreamInterval)
 	s.ClientEventCh = make(chan []ClientEvent, DefaultChannelBuffer)
 	s.TableUpdatesCh = make(chan []state.TableUpdate, DefaultChannelBuffer)

@@ -231,8 +231,6 @@ func (g *GameTick) Start(ctx *EngineCtx) {
 						}
 					}
 
-					ctx.FlushStateUpdates()
-
 					DeleteAllTicksAtTickNumber(ctx.World, g.TickNumber)
 					g.TickNumber++
 				}
@@ -261,8 +259,6 @@ func TickGameSystems(ctx *EngineCtx) {
 		tickSystem.TickFunction(ctx)
 	}
 	DeleteAllTicksAtTickNumber(ctx.World, gameTick.TickNumber)
-
-	ctx.FlushStateUpdates()
 }
 
 func SerializeRequestToString[T any](req T) (string, error) {

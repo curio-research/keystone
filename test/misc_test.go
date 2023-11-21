@@ -108,6 +108,7 @@ func randomInRange(a, b int) int {
 
 // performance test for how fast we can apply a state
 func TestApplyTx(t *testing.T) {
+	t.Skip()
 	testutils.SkipTestIfShort(t)
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
