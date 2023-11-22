@@ -266,7 +266,7 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 
 	// apply transactions to the world
 	server.TickWorldForward(initialGameEngine, 3)
-	require.Nil(t, saveTxHandler.SaveTransactions(getAllTx(initialGameEngine)))
+	require.Nil(t, saveTxHandler.SaveTransactions(getTxInChan(initialGameEngine)))
 
 	// reinitializing tick 1
 	newCtx, newGw := newGameEngine(t)
@@ -437,8 +437,8 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 	server.QueueTxAtTime(game2.World, 2, server.NewKeystoneTx(testReq{false}, nil), "", true)
 	server.TickWorldForward(game2, 2)
 
-	game1.SaveTransactionsHandler.SaveTransactions(getAllTx(game1))
-	game2.SaveTransactionsHandler.SaveTransactions(getAllTx(game2))
+	game1.SaveTransactionsHandler.SaveTransactions(getTxInChan(game1))
+	game2.SaveTransactionsHandler.SaveTransactions(getTxInChan(game2))
 
 	newGameEngine1 := newGameEngine(t, game1System, "")
 	newGameEngine2 := newGameEngine(t, game2System, "")
@@ -473,7 +473,7 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 	assert.Equal(t, testWallet2, player3.MainWallet)
 }
 
-func getAllTx(ctx *server.EngineCtx) []server.TransactionSchema {
+func getTxInChan(ctx *server.EngineCtx) []server.TransactionSchema {
 	txs := []server.TransactionSchema{}
 	txCounter := len(ctx.TransactionCh)
 	for i := 0; i < txCounter; i++ {
