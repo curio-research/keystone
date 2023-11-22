@@ -106,12 +106,20 @@ func randomInRange(a, b int) int {
 	return rand.Intn(b-a+1) + a
 }
 
+// TODO when the sql/ws is set to false, we shouldn't have a deadlock
 // performance test for how fast we can apply a state
 func TestApplyTx(t *testing.T) {
-	t.Skip()
 	testutils.SkipTestIfShort(t)
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
+	go func() {
+		for {
+			select {
+			case <-ctx.StateUpdateCh:
+			case <-ctx.TransactionCh:
+			}
+		}
+	}()
 
 	ctx.GameTick.Schedule.AddSystem(0, perfTestSystem)
 

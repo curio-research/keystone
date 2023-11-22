@@ -37,7 +37,7 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval time.Duration) {
 				case <-ticker.C:
 					ctx.SaveStateHandler.SaveState(updatesToPublish)
 					updatesToPublish = []state.TableUpdate{}
-				case updates := <-ctx.StateUpdateChan:
+				case updates := <-ctx.StateUpdateCh:
 					updatesToPublish = append(updatesToPublish, updates...)
 				}
 			}
@@ -62,7 +62,7 @@ func SetupSaveTxLoop(ctx *EngineCtx, saveInterval time.Duration) {
 				case <-ticker.C:
 					ctx.SaveTransactionsHandler.SaveTransactions(txToPublish)
 					txToPublish = []TransactionSchema{}
-				case tx := <-ctx.TransactionChan:
+				case tx := <-ctx.TransactionCh:
 					txToPublish = append(txToPublish, tx)
 				}
 			}

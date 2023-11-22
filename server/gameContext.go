@@ -43,7 +43,7 @@ type EngineCtx struct {
 	TransactionsToSaveLock sync.Mutex
 
 	// Transactions to be stored in the data availability layer (aka a write ahead log basically)
-	TransactionChan chan TransactionSchema
+	TransactionCh chan TransactionSchema
 
 	// Handles interactions for saving stae
 	ShouldSaveState  bool
@@ -68,7 +68,7 @@ type EngineCtx struct {
 	StateUpdatesMutex sync.Mutex
 
 	// State updates
-	StateUpdateChan chan []state.TableUpdate
+	StateUpdateCh chan []state.TableUpdate
 }
 
 // for debugging
@@ -113,13 +113,15 @@ func (ctx *EngineCtx) addTransactionToSave(transaction TransactionSchema) error 
 	ctx.TransactionsToSaveLock.Lock()
 	defer ctx.TransactionsToSaveLock.Unlock()
 
-	ctx.TransactionChan <- transaction
+	ctx.TransactionCh <- transaction
 	return nil
 }
 
 // add to the list of state updates to save to database
 func (ctx *EngineCtx) FlushStateUpdates() {
-	ctx.StateUpdateChan <- ctx.World.TableUpdates
+	if ctx.ShouldSaveState {
+		ctx.StateUpdateCh <- ctx.World.TableUpdates
+	}
 	ctx.World.ClearTableUpdates()
 }
 
