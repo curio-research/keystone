@@ -39,6 +39,8 @@ func coreTestSaveStateHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveSt
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
+	gameEngine.SetSaveState(true)
+
 	server.TickWorldForward(gameEngine, 1)
 	require.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateCh))
 
@@ -84,6 +86,8 @@ func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQ
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
+	gameEngine.SetSaveState(true)
+
 	server.TickWorldForward(gameEngine, 1)
 	assert.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateCh))
 
@@ -143,6 +147,8 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 	})
 
 	gameEngine := initializeTestWorld(addVarsSystem)
+	gameEngine.SetSaveState(true)
+
 	server.TickWorldForward(gameEngine, 1)
 	require.Nil(t, saveStateHandler.SaveState(<-gameEngine.StateUpdateCh))
 
@@ -226,6 +232,8 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 
 	newGameEngine := func(t *testing.T) (*server.EngineCtx, *state.GameWorld) {
 		gameEngine := initializeTestWorld(initializePersonSystem, updatePersonSystem)
+		gameEngine.SetSaveTx(true)
+
 		return gameEngine, gameEngine.World
 	}
 
@@ -319,8 +327,9 @@ func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.MySQ
 
 	newGameEngine := func(t *testing.T, system server.TickSystemFunction, gameID string) *server.EngineCtx {
 		gameEngine := initializeTestWorld(system)
-		gameEngine.GameId = gameID
+		gameEngine.SetSaveState(true)
 
+		gameEngine.GameId = gameID
 		return gameEngine
 	}
 
@@ -361,31 +370,35 @@ func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.MySQ
 
 // core test multiple games save transactions
 func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *gamedb.MySQLSaveStateHandler, saveTxHandler1 *gamedb.MySQLSaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *gamedb.MySQLSaveStateHandler, saveTxHandler2 *gamedb.MySQLSaveTransactionHandler, db2 *sql.DB) {
-	game1System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
-		tickNumber := ctx.GameCtx.GameTick.TickNumber
+	type testReq struct {
+		Boolean bool `json:"boolean"`
+	}
+
+	game1System := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testReq]) {
 		w := ctx.W
-		if tickNumber == 1 {
+		req := ctx.Req.Data
+
+		if req.Boolean {
 			personTable.AddSpecific(w, testEntity1, Person{
 				Name:       testName1,
 				MainWallet: testWallet1,
 			})
-		} else if tickNumber == 2 {
+		} else {
 			player := personTable.Get(w, testEntity1)
 			player.MainWallet = testWallet2
 			personTable.Set(w, testEntity1, player)
 		}
 	})
 
-	game2System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
-		tickNumber := ctx.GameCtx.GameTick.TickNumber
+	game2System := server.CreateSystemFromRequestHandler(func(ctx *server.TransactionCtx[testReq]) {
 		w := ctx.W
-
-		if tickNumber == 1 {
+		req := ctx.Req.Data
+		if req.Boolean {
 			personTable.AddSpecific(w, testEntity1, Person{
 				Name:       testName2,
 				MainWallet: testWallet1,
 			})
-		} else if tickNumber == 2 {
+		} else {
 			personTable.AddSpecific(w, testEntity2, Person{
 				Name:       testName1,
 				MainWallet: testWallet2,
@@ -395,6 +408,7 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 
 	newGameEngine := func(t *testing.T, system server.TickSystemFunction, gameID string) *server.EngineCtx {
 		gameEngine := initializeTestWorld()
+		gameEngine.SetSaveTx(true)
 
 		gameEngine.GameTick.Schedule.AddSystem(1, system)
 		gameEngine.GameId = gameID
@@ -415,7 +429,13 @@ func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *game
 	game2.SaveStateHandler = saveStateHandler2
 	game2.SaveTransactionsHandler = saveTxHandler2
 
+	server.QueueTxAtTime(game1.World, 1, server.NewKeystoneTx(testReq{Boolean: true}, nil), "", true)
+	server.QueueTxAtTime(game1.World, 2, server.NewKeystoneTx(testReq{false}, nil), "", true)
 	server.TickWorldForward(game1, 2)
+
+	server.QueueTxAtTime(game2.World, 1, server.NewKeystoneTx(testReq{Boolean: true}, nil), "", true)
+	server.QueueTxAtTime(game2.World, 2, server.NewKeystoneTx(testReq{false}, nil), "", true)
+	server.TickWorldForward(game2, 2)
 
 	game1.SaveTransactionsHandler.SaveTransactions(getAllTx(game1))
 	game2.SaveTransactionsHandler.SaveTransactions(getAllTx(game2))

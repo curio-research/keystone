@@ -39,9 +39,6 @@ type EngineCtx struct {
 	// HTTP port
 	HttpPort int
 
-	// Transaction queue
-	TransactionsToSaveLock sync.Mutex
-
 	// Transactions to be stored in the data availability layer (aka a write ahead log basically)
 	TransactionCh chan TransactionSchema
 
@@ -95,6 +92,10 @@ func PrintErrorLog(ctx *EngineCtx) {
 }
 
 func (ctx *EngineCtx) AddTransactionsToSave() {
+	if !ctx.ShouldSaveTransactions {
+		return
+	}
+
 	tickNumber := ctx.GameTick.TickNumber
 
 	transactionIds := GetTransactionsAtTickNumber(ctx.World, tickNumber)
@@ -110,9 +111,6 @@ func (ctx *EngineCtx) AddTransactionsToSave() {
 
 // add a transactions that needs to be saved
 func (ctx *EngineCtx) addTransactionToSave(transaction TransactionSchema) error {
-	ctx.TransactionsToSaveLock.Lock()
-	defer ctx.TransactionsToSaveLock.Unlock()
-
 	ctx.TransactionCh <- transaction
 	return nil
 }

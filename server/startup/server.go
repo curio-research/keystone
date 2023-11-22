@@ -2,7 +2,6 @@ package startup
 
 import (
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/curio-research/keystone/server"
@@ -40,7 +39,6 @@ func NewGameEngine() *server.EngineCtx {
 		IsLive:                 false,
 		World:                  gameWorld,
 		GameTick:               gameTick,
-		TransactionsToSaveLock: sync.Mutex{},
 		GinHttpEngine:          ginHttpServer,
 		Stream:                 streamServer,
 		HttpPort:               server.DefaultServerPort,
