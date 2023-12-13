@@ -126,29 +126,31 @@ func (s *StreamServer) Start(ctx *EngineCtx) {
 
 	httpServer := ctx.GinHttpEngine
 
-	httpServer.GET("/", func(context *gin.Context) {
-		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		s.AddConnection(websocket, false)
-
-		for {
-			_, msg, err := websocket.ReadMessage()
-
+	if s.SocketRequestRouter != nil {
+		httpServer.GET("/", func(context *gin.Context) {
+			websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 			if err != nil {
-				delete(s.Conns, websocket)
-				break
+				log.Println(err)
+				return
 			}
 
-			// deserialize from bytes
-			requestMsg := NewMessageFromBuffer(msg)
+			s.AddConnection(websocket, false)
 
-			s.SocketRequestRouter(ctx, requestMsg, websocket)
-		}
-	})
+			for {
+				_, msg, err := websocket.ReadMessage()
+
+				if err != nil {
+					delete(s.Conns, websocket)
+					break
+				}
+
+				// deserialize from bytes
+				requestMsg := NewMessageFromBuffer(msg)
+
+				s.SocketRequestRouter(ctx, requestMsg, websocket)
+			}
+		})
+	}
 
 	// subscribe to all table updates
 	httpServer.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
