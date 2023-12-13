@@ -130,9 +130,6 @@ func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middleware
 		transactionIds := GetSystemTransactionsOfType[KeystoneTx[T]](ctx)
 
 		for _, transactionId := range sort.IntSlice(transactionIds) {
-			// create a world to temporarily record ecs changes
-			ctx.World.ClearTableUpdates()
-
 			// new client events array
 			eventCtx := &EventCtx{}
 
@@ -171,6 +168,7 @@ func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middleware
 			}
 
 			BroadcastMessage(ctx, eventCtx.ClientEvents)
+			ctx.FlushStateUpdates()
 		}
 
 		return nil
@@ -180,8 +178,6 @@ func CreateSystemFromRequestHandler[T any](handler ISystemHandler[T], middleware
 // general are not triggered by user inputs
 func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 	return func(ctx *EngineCtx) error {
-		ctx.World.ClearTableUpdates()
-
 		eventCtx := &EventCtx{}
 
 		worldUpdateBuffer := state.NewWorldUpdateBuffer(ctx.World)
@@ -201,6 +197,7 @@ func CreateGeneralSystem(handler ISystemHandler[any]) TickSystemFunction {
 
 		// add state updates
 		BroadcastMessage(ctx, eventCtx.ClientEvents)
+		ctx.FlushStateUpdates()
 
 		return nil
 	}
@@ -234,8 +231,6 @@ func (g *GameTick) Start(ctx *EngineCtx) {
 						}
 					}
 
-					ctx.AddStateUpdatesToSave()
-
 					DeleteAllTicksAtTickNumber(ctx.World, g.TickNumber)
 					g.TickNumber++
 				}
@@ -264,8 +259,6 @@ func TickGameSystems(ctx *EngineCtx) {
 		tickSystem.TickFunction(ctx)
 	}
 	DeleteAllTicksAtTickNumber(ctx.World, gameTick.TickNumber)
-
-	ctx.AddStateUpdatesToSave()
 }
 
 func SerializeRequestToString[T any](req T) (string, error) {

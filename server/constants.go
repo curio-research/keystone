@@ -18,5 +18,5 @@ const (
 
 	DefaultTickRate = 100 // ms
 
-	TickRate = 100
+	DefaultChannelBuffer = 20
 )

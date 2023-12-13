@@ -388,13 +388,6 @@ func CopyTableUpdates(updates []TableUpdate) []TableUpdate {
 	return res
 }
 
-// Get and clear game world's table updates
-func (w *GameWorld) GetAndClearTableUpdates() []TableUpdate {
-	updates := CopyTableUpdates(w.TableUpdates)
-	w.ClearTableUpdates()
-	return updates
-}
-
 // Clear game world's table updates
 func (w *GameWorld) ClearTableUpdates() {
 	w.TableUpdates = TableUpdateArray{}

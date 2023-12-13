@@ -59,7 +59,7 @@ func TestMySQLMultipleGames_SaveState(t *testing.T) {
 	coreTestMultipleGamesSaveState(t, saveStateHandler1, saveTxHandler1, db1, saveStateHandler2, saveTxHandler2, db2)
 }
 
-func TestMultipleGames_SaveTx(t *testing.T) {
+func TestMySQLMultipleGames_SaveTx(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
 	saveStateHandler1, saveTxHandler1, db1 := testutils.SetupMySQLTestDB(t, testGameID1, true, testSchemaToAccessors)

@@ -2,6 +2,8 @@ module github.com/curio-research/keystone
 
 go 1.20
 
+replace github.com/curio-research/keystone v0.1.14 => ../keystone
+
 require (
 	github.com/DATA-DOG/go-txdb v0.1.7
 	github.com/ethereum/go-ethereum v1.13.4
@@ -9,12 +11,10 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
-	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.17
-	github.com/sergi/go-diff v1.3.1
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.30.0
 	gorm.io/driver/mysql v1.5.2
@@ -34,6 +34,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/holiman/uint256 v1.2.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -53,5 +54,6 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

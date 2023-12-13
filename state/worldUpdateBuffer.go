@@ -100,7 +100,7 @@ func (w *WorldUpdateBuffer) Entities(tableName string) []int {
 }
 
 func (w *WorldUpdateBuffer) ApplyUpdates() {
-	tableUpdates := w.bufferWorld.GetTableUpdates()
+	tableUpdates := w.GetTableUpdates()
 	for _, update := range tableUpdates {
 		switch update.OP {
 		case UpdateOP:
@@ -114,7 +114,7 @@ func (w *WorldUpdateBuffer) ApplyUpdates() {
 }
 
 func (w *WorldUpdateBuffer) GetTableUpdates() TableUpdateArray {
-	return w.bufferWorld.GetTableUpdates() // should this panic?
+	return w.bufferWorld.GetTableUpdates()
 }
 
 func union(arr1 []int, arr2 []int) map[int]struct{} {

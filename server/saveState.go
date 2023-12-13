@@ -28,15 +28,18 @@ func SetupSaveStateLoop(ctx *EngineCtx, saveInterval time.Duration) {
 	}
 
 	ticker := time.NewTicker(tickerTime)
+	updatesToPublish := []state.TableUpdate{}
 
 	go func() {
-		for range ticker.C {
+		for {
 			if ctx.IsLive && ctx.ShouldSaveState {
-				// Deep copy pending state updates to save and clear then
-				updatesToPublish := state.CopyTableUpdates(ctx.PendingStateUpdatesToSave)
-				ctx.ClearStateUpdatesToSave()
-
-				ctx.SaveStateHandler.SaveState(updatesToPublish)
+				select {
+				case <-ticker.C:
+					ctx.SaveStateHandler.SaveState(updatesToPublish)
+					updatesToPublish = []state.TableUpdate{}
+				case updates := <-ctx.StateUpdateCh:
+					updatesToPublish = append(updatesToPublish, updates...)
+				}
 			}
 		}
 	}()
@@ -50,13 +53,18 @@ func SetupSaveTxLoop(ctx *EngineCtx, saveInterval time.Duration) {
 	}
 
 	ticker := time.NewTicker(tickerTime)
+	txToPublish := []TransactionSchema{}
 
 	go func() {
-		for range ticker.C {
+		for {
 			if ctx.IsLive && ctx.ShouldSaveTransactions {
-				transactionsToSave := CopyTransactions(ctx.TransactionsToSave)
-				ctx.ClearTransactionsToSave()
-				ctx.SaveTransactionsHandler.SaveTransactions(transactionsToSave)
+				select {
+				case <-ticker.C:
+					ctx.SaveTransactionsHandler.SaveTransactions(txToPublish)
+					txToPublish = []TransactionSchema{}
+				case tx := <-ctx.TransactionCh:
+					txToPublish = append(txToPublish, tx)
+				}
 			}
 		}
 	}()

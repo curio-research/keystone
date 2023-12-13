@@ -2,7 +2,6 @@ package startup
 
 import (
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/curio-research/keystone/server"
@@ -40,12 +39,13 @@ func NewGameEngine() *server.EngineCtx {
 		IsLive:                 false,
 		World:                  gameWorld,
 		GameTick:               gameTick,
-		TransactionsToSaveLock: sync.Mutex{},
 		GinHttpEngine:          ginHttpServer,
 		Stream:                 streamServer,
 		HttpPort:               server.DefaultServerPort,
 		ShouldSaveState:        false,
 		ShouldSaveTransactions: false,
+		TransactionCh:          make(chan server.TransactionSchema, server.DefaultChannelBuffer),
+		StateUpdateCh:          make(chan []state.TableUpdate, server.DefaultChannelBuffer),
 	}
 
 	// Use protobuf based handlers as default

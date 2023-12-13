@@ -165,7 +165,6 @@ func (t *testPersonRequests) GetIdentityPayload() testIdentityPayload {
 }
 
 func initializeTestWorld(systems ...server.TickSystemFunction) *server.EngineCtx {
-
 	ctx := startup.NewGameEngine()
 	ctx.SetGameId("test")
 	ctx.SetTickRate(20)

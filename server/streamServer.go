@@ -30,17 +30,14 @@ type StreamServer struct {
 	// Stream interval (milliseconds)
 	StreamInterval int
 
-	// Lock for protobuf packets
-	ProtoBufPacketsMutex sync.Mutex
-
 	// Socket request router
 	SocketRequestRouter ISocketRequestRouter
 
 	// Client message data packets to be broadcasted
-	ClientEventsQueue []ClientEvent
+	ClientEventCh chan []ClientEvent
 
 	// Table updates to be broadcasted
-	TableUpdatesQueue []state.TableUpdate
+	TableUpdatesCh chan []state.TableUpdate
 
 	// A pool of connections
 	Conns      map[*websocket.Conn]ConnectionType
@@ -99,10 +96,10 @@ func NewStreamServer() *StreamServer {
 
 	s.Port = DefaultWebsocketPort
 	s.Conns = make(map[*websocket.Conn]ConnectionType)
-	s.ClientEventsQueue = make([]ClientEvent, 0)
 	s.PlayerIdToConnection = make(map[int]*websocket.Conn)
-	s.ProtoBufPacketsMutex = sync.Mutex{}
 	s.StreamInterval = int(defaultStreamInterval)
+	s.ClientEventCh = make(chan []ClientEvent, DefaultChannelBuffer)
+	s.TableUpdatesCh = make(chan []state.TableUpdate, DefaultChannelBuffer)
 
 	return s
 }
@@ -126,29 +123,31 @@ func (s *StreamServer) Start(ctx *EngineCtx) {
 
 	httpServer := ctx.GinHttpEngine
 
-	httpServer.GET("/", func(context *gin.Context) {
-		websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		s.AddConnection(websocket, false)
-
-		for {
-			_, msg, err := websocket.ReadMessage()
-
+	if s.SocketRequestRouter != nil {
+		httpServer.GET("/", func(context *gin.Context) {
+			websocket, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 			if err != nil {
-				delete(s.Conns, websocket)
-				break
+				log.Println(err)
+				return
 			}
 
-			// deserialize from bytes
-			requestMsg := NewMessageFromBuffer(msg)
+			s.AddConnection(websocket, false)
 
-			s.SocketRequestRouter(ctx, requestMsg, websocket)
-		}
-	})
+			for {
+				_, msg, err := websocket.ReadMessage()
+
+				if err != nil {
+					delete(s.Conns, websocket)
+					break
+				}
+
+				// deserialize from bytes
+				requestMsg := NewMessageFromBuffer(msg)
+
+				s.SocketRequestRouter(ctx, requestMsg, websocket)
+			}
+		})
+	}
 
 	// subscribe to all table updates
 	httpServer.GET("/subscribeAllTableUpdates", func(context *gin.Context) {
@@ -205,21 +204,13 @@ type WSMessage struct {
 
 // Start message broadcast loop
 func (ws *StreamServer) StartMessageBroadcastLoop() {
-
 	ticker := time.NewTicker(time.Duration(ws.StreamInterval) * time.Millisecond)
 	quit := make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case <-ticker.C:
-
-				packets := ws.FetchEventsFromQueue()
-				ws.ClearClientMessageQueue()
-
-				tableUpdates := ws.FetchTableUpdatesFromQueue()
-				ws.ClearTableUpdatesQueue()
-
+			case tableUpdates := <-ws.TableUpdatesCh:
 				tableUpdateBytes, _ := state.EncodeTableUpdateArrayToBytes(tableUpdates)
 
 				// broadcast all state updates to subscribers of state data
@@ -228,12 +219,10 @@ func (ws *StreamServer) StartMessageBroadcastLoop() {
 						conn.WriteMessage(websocket.TextMessage, tableUpdateBytes)
 					}
 				}
-
+			case packets := <-ws.ClientEventCh:
 				if len(packets) == 0 {
 					continue
 				}
-
-				ws.ProtoBufPacketsMutex.Lock()
 
 				// loop through packets and broadcast to user
 				for _, packet := range packets {
@@ -258,11 +247,7 @@ func (ws *StreamServer) StartMessageBroadcastLoop() {
 
 						}
 					}
-
 				}
-
-				ws.ProtoBufPacketsMutex.Unlock()
-
 			case <-quit:
 				ticker.Stop()
 				return
@@ -279,48 +264,9 @@ func (ws *StreamServer) PublishStateChanges(tableUpdates state.TableUpdateArray,
 		return
 	}
 
-	ws.ProtoBufPacketsMutex.Lock()
-
 	// Example from event to NetworkMessage, should be modified for real use case
-	ws.ClientEventsQueue = append(ws.ClientEventsQueue, clientEvents...)
+	ws.ClientEventCh <- clientEvents
 
 	// push state updates to queue
-	ws.TableUpdatesQueue = append(ws.TableUpdatesQueue, tableUpdates...)
-
-	ws.ProtoBufPacketsMutex.Unlock()
-}
-
-func (ws *StreamServer) FetchEventsFromQueue() []ClientEvent {
-	ws.ProtoBufPacketsMutex.Lock()
-
-	res := []ClientEvent{}
-	res = append(res, ws.ClientEventsQueue...)
-
-	ws.ProtoBufPacketsMutex.Unlock()
-
-	return res
-}
-
-// clear all messages in the client message queue
-func (ws *StreamServer) ClearClientMessageQueue() {
-	ws.ClientEventsQueue = make([]ClientEvent, 0)
-}
-
-// fetch all table updates from queue
-func (ws *StreamServer) FetchTableUpdatesFromQueue() []state.TableUpdate {
-	ws.ProtoBufPacketsMutex.Lock()
-
-	res := []state.TableUpdate{}
-	res = append(res, ws.TableUpdatesQueue...)
-
-	ws.ProtoBufPacketsMutex.Unlock()
-
-	return res
-}
-
-// clear all table updates from queue
-func (ws *StreamServer) ClearTableUpdatesQueue() {
-	ws.ProtoBufPacketsMutex.Lock()
-	ws.TableUpdatesQueue = make([]state.TableUpdate, 0)
-	ws.ProtoBufPacketsMutex.Unlock()
+	ws.TableUpdatesCh <- tableUpdates
 }

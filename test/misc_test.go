@@ -111,6 +111,14 @@ func TestApplyTx(t *testing.T) {
 	testutils.SkipTestIfShort(t)
 
 	ctx, _, _, _, _ := startTestServer(t, server.Dev)
+	go func() {
+		for {
+			select {
+			case <-ctx.StateUpdateCh:
+			case <-ctx.TransactionCh:
+			}
+		}
+	}()
 
 	ctx.GameTick.Schedule.AddSystem(0, perfTestSystem)
 
