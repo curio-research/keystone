@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/curio-research/keystone/state"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,7 @@ type RewindStateRequest struct {
 }
 
 // TODO will only one person have the power to restore the state
-func HandleRewindState(ctx *EngineCtx, initWorld func(ctx *EngineCtx)) gin.HandlerFunc {
+func HandleRewindState(ctx *EngineCtx, initWorld func(w *state.GameWorld)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if ctx.IsRestoringState {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -33,7 +34,7 @@ func HandleRewindState(ctx *EngineCtx, initWorld func(ctx *EngineCtx)) gin.Handl
 		ctx.IsRestoringState = true
 
 		resetWorldAndTick(ctx)
-		initWorld(ctx)
+		initWorld(ctx.World)
 
 		futureTick := CalcFutureTickFromS(ctx, req.ElapsedSeconds)
 		err = ctx.SaveTransactionsHandler.RestoreStateFromTxs(ctx, futureTick, req.GameId)
