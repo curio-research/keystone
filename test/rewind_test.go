@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/curio-research/keystone/server/startup"
-	"github.com/curio-research/keystone/state"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,8 +41,8 @@ func coreRewindTest(t *testing.T, ctx *server.EngineCtx, s *http.Server) {
 	player1Entity := testEntity1
 	book1Entity, book2Entity, book3Entity := testEntity2, testEntity3, testEntity4
 
-	initWorld := func(w *state.GameWorld) {
-		bookTable.AddSpecific(w, testEntity4, Book{Title: testBookTitle3, Author: testBookAuthor3})
+	initWorld := func(ctx *server.EngineCtx) {
+		bookTable.AddSpecific(ctx.World, testEntity4, Book{Title: testBookTitle3, Author: testBookAuthor3})
 	}
 	startup.RegisterRewindEndpoint(ctx, initWorld)
 
