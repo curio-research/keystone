@@ -10,19 +10,19 @@ import (
 )
 
 // initialize and set mySQL handlers to server context
-func MySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+func MySQLHandlers(ctx *server.EngineCtx, mySQLDSN string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*SaveStateHandler, *SaveTransactionHandler, error) {
 	dialector := mysql.Open(mySQLDSN)
 	return SQLHandlersWithDialector(ctx, dialector, accessors)
 }
 
 // initialize SQLite handler through file path
-func SQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+func SQLiteHandlers(ctx *server.EngineCtx, sqliteDBFilePath string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*SaveStateHandler, *SaveTransactionHandler, error) {
 	dialector := sqlite.Open(sqliteDBFilePath)
 	return SQLHandlersWithDialector(ctx, dialector, accessors)
 }
 
 // initialize SQLite handlers through dialector
-func SQLHandlersWithDialector(ctx *server.EngineCtx, dialector gorm.Dialector, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+func SQLHandlersWithDialector(ctx *server.EngineCtx, dialector gorm.Dialector, accessors map[interface{}]*state.TableBaseAccessor[any]) (*SaveStateHandler, *SaveTransactionHandler, error) {
 	saveStateHandler, saveTransactionsHandler, err := SQLHandlersFromDialector(dialector, ctx.GameId, accessors)
 	if err != nil {
 		return nil, nil, err
@@ -31,7 +31,7 @@ func SQLHandlersWithDialector(ctx *server.EngineCtx, dialector gorm.Dialector, a
 	return saveStateHandler, saveTransactionsHandler, nil
 }
 
-func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, *MySQLSaveTransactionHandler, error) {
+func SQLHandlersFromDialector(dialector gorm.Dialector, gameId string, accessors map[interface{}]*state.TableBaseAccessor[any]) (*SaveStateHandler, *SaveTransactionHandler, error) {
 	saveStateHandler, err := SQLSaveStateHandler(dialector, gameId, accessors)
 	if err != nil {
 		return nil, nil, err

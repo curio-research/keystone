@@ -29,7 +29,7 @@ func init() {
 	txdb.Register("txdb", "mysql", testSQLDSN)
 }
 
-func SetupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
+func SetupMySQLTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.SaveStateHandler, *gamedb.SaveTransactionHandler, *sql.DB) {
 	var db *sql.DB
 	db, err := sql.Open("txdb", testSQLDSN)
 	if err != nil {
@@ -70,7 +70,7 @@ func deleteAllTablesMySQL(t *testing.T, db *sql.DB) {
 }
 
 // setup local sqlite test db
-func SetupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.MySQLSaveStateHandler, *gamedb.MySQLSaveTransactionHandler, *sql.DB) {
+func SetupSQLiteTestDB(t *testing.T, testGameID string, deleteTables bool, accessors map[interface{}]*state.TableBaseAccessor[any]) (*gamedb.SaveStateHandler, *gamedb.SaveTransactionHandler, *sql.DB) {
 	db, err := sql.Open("sqlite3", testSQLiteDBPath)
 	if err != nil {
 		require.Nil(t, err)

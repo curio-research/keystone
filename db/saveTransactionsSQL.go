@@ -7,12 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type MySQLSaveTransactionHandler struct {
+type SaveTransactionHandler struct {
 	transactionTable *SQLTransactionTable
 	gameId           string
 }
 
-func SQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLSaveTransactionHandler, error) {
+func SQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*SaveTransactionHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err
@@ -23,14 +23,14 @@ func SQLSaveTransactionHandler(dialector gorm.Dialector, gameID string) (*MySQLS
 		return nil, err
 	}
 
-	handler := &MySQLSaveTransactionHandler{
+	handler := &SaveTransactionHandler{
 		transactionTable: txTable,
 		gameId:           gameID,
 	}
 	return handler, nil
 }
 
-func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.TransactionSchema) error {
+func (h *SaveTransactionHandler) SaveTransactions(transactions []server.TransactionSchema) error {
 	updatesForSql := []TransactionSQLFormat{}
 	for _, transaction := range transactions {
 		updatesForSql = append(updatesForSql, TransactionSQLFormat{
@@ -46,7 +46,7 @@ func (h *MySQLSaveTransactionHandler) SaveTransactions(transactions []server.Tra
 }
 
 // initialize the world to the initial state before calling
-func (h *MySQLSaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx, tickNumber int, _ string) error {
+func (h *SaveTransactionHandler) RestoreStateFromTxs(ctx *server.EngineCtx, tickNumber int, _ string) error {
 	if ctx.GameTick.TickNumber != 1 {
 		return fmt.Errorf("game tick was not reset to 1")
 	}
