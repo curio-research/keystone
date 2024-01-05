@@ -21,6 +21,7 @@ type CelestiaSaveTransactionHandler struct {
 	conn   *CelestiaConn
 	gameId string
 	s      *user.Signer
+	ns     namespace.Namespace
 }
 
 func NewCelestiaSaveTransactionHandler(grpcAddr, gameId string) (*CelestiaSaveTransactionHandler, error) {
@@ -53,17 +54,19 @@ func NewCelestiaSaveTransactionHandler(grpcAddr, gameId string) (*CelestiaSaveTr
 	if err != nil {
 		return nil, err
 	}
+
+	ns := namespace.MustNewV0([]byte("1234567890"))
+
 	return &CelestiaSaveTransactionHandler{
 		conn:   NewCelestiaConn(conn),
 		gameId: gameId,
 		s:      signer,
+		ns:     ns,
 	}, nil
 }
 
 func (c *CelestiaSaveTransactionHandler) SaveTransactions(updates []server.TransactionSchema) error {
-	ns := namespace.MustNewV0([]byte("1234567890"))
-
-	blob, err := blobtypes.NewBlob(ns, []byte("some data"), appconsts.ShareVersionZero)
+	blob, err := blobtypes.NewBlob(c.ns, []byte("some data"), appconsts.ShareVersionZero)
 	if err != nil {
 		return err
 	}
