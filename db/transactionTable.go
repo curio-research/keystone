@@ -1,7 +1,7 @@
 package db
 
 import (
-	"google.golang.org/grpc"
+	"github.com/celestiaorg/celestia-node/api/rpc/client"
 	"gorm.io/gorm"
 )
 
@@ -10,11 +10,11 @@ type SQLTransactionTable struct {
 }
 
 type CelestiaConn struct {
-	conn *grpc.ClientConn
+	*client.Client
 }
 
-func NewCelestiaConn(conn *grpc.ClientConn) *CelestiaConn {
-	return &CelestiaConn{conn: conn}
+func NewCelestiaConn(conn *client.Client) *CelestiaConn {
+	return &CelestiaConn{conn}
 }
 
 // player requests (aka transactions) are objects that need to be made available such that
