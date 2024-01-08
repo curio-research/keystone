@@ -12,20 +12,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type MySQLSaveStateHandler struct {
+type SaveStateHandler struct {
 	dbConnection       *gorm.DB
 	gameID             string
 	schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]
 }
 
 // initialize connection mySQL
-func SQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]) (*MySQLSaveStateHandler, error) {
+func SQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAccessors map[interface{}]*state.TableBaseAccessor[any]) (*SaveStateHandler, error) {
 	db, err := gorm.Open(dialector, gormOpts(gameID))
 	if err != nil {
 		return nil, err
 	}
 
-	handler := &MySQLSaveStateHandler{
+	handler := &SaveStateHandler{
 		dbConnection:       db,
 		gameID:             gameID,
 		schemasToAccessors: schemasToAccessors,
@@ -40,7 +40,7 @@ func SQLSaveStateHandler(dialector gorm.Dialector, gameID string, schemasToAcces
 }
 
 // initialize mySQL tables for saving state updates
-func (m *MySQLSaveStateHandler) initializeDBTables() error {
+func (m *SaveStateHandler) initializeDBTables() error {
 	db := m.dbConnection
 	if db == nil {
 		return fmt.Errorf("db connection is nil")
@@ -74,7 +74,7 @@ func (m *MySQLSaveStateHandler) initializeDBTables() error {
 }
 
 // save state updates to mySQL database
-func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) error {
+func (m *SaveStateHandler) SaveState(tableUpdates []state.TableUpdate) error {
 	// process table updates
 	tableUpdateOperationsByTable, tableRemovalOperationsByTable := processUpdatesForUpload(tableUpdates)
 
@@ -105,7 +105,7 @@ func (m *MySQLSaveStateHandler) SaveState(tableUpdates []state.TableUpdate) erro
 }
 
 // given a schema type, use the mapping from tables to cast to an array of that type
-func (m *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
+func (m *SaveStateHandler) castToSchemaArray(schemaType string, vals []interface{}) interface{} {
 	var accessor *state.TableBaseAccessor[any]
 
 	// loop through user-defined schemas
@@ -141,7 +141,7 @@ func (m *MySQLSaveStateHandler) castToSchemaArray(schemaType string, vals []inte
 }
 
 // restore state updates from mySQL database
-func (m *MySQLSaveStateHandler) RestoreState(ctx *server.EngineCtx, _ string) error {
+func (m *SaveStateHandler) RestoreState(ctx *server.EngineCtx, _ string) error {
 	gw := ctx.World
 	for _, table := range gw.Tables {
 		if len(table.EntityToValue) != 0 {

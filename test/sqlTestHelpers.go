@@ -14,7 +14,7 @@ import (
 // shared core tests for sql family
 
 // core test save state handler
-func coreTestSaveStateHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveStateHandler) {
+func coreTestSaveStateHandler(t *testing.T, saveStateHandler *gamedb.SaveStateHandler) {
 	var player1Entity, player2Entity, nt1Entity, nt2Entity int
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
@@ -69,7 +69,7 @@ func coreTestSaveStateHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveSt
 }
 
 // core test save handler removal
-func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveStateHandler) {
+func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.SaveStateHandler) {
 	var player1Entity int
 	addFirst := true
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
@@ -104,7 +104,7 @@ func coreTestSaveStateRemovalHandler(t *testing.T, saveStateHandler *gamedb.MySQ
 }
 
 // core test save state handler with nested structs
-func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *gamedb.MySQLSaveStateHandler) {
+func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *gamedb.SaveStateHandler) {
 	addVarsSystem := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		w := ctx.W
 		petCommunityTable.AddSpecific(w, testEntity1, PetCommunity{
@@ -189,7 +189,7 @@ func coreTestSaveStateWithNestedStructsHandler(t *testing.T, saveStateHandler *g
 }
 
 // core test restore state from transactions
-func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *gamedb.MySQLSaveTransactionHandler) {
+func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *gamedb.SaveTransactionHandler) {
 	var p1Entity, p2Entity, p3Entity = testEntity1, testEntity2, testEntity3
 	var p1Pos, p2Pos, p3Pos = testPos1, testPos2, testPos3
 
@@ -312,7 +312,7 @@ func coreTestRestoreStateFromTransactionsHandler(t *testing.T, saveTxHandler *ga
 }
 
 // core test multiple games save state
-func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.MySQLSaveStateHandler, saveTxHandler1 *gamedb.MySQLSaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *gamedb.MySQLSaveStateHandler, saveTxHandler2 *gamedb.MySQLSaveTransactionHandler, db2 *sql.DB) {
+func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.SaveStateHandler, saveTxHandler1 *gamedb.SaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *gamedb.SaveStateHandler, saveTxHandler2 *gamedb.SaveTransactionHandler, db2 *sql.DB) {
 	game1System := server.CreateGeneralSystem(func(ctx *server.TransactionCtx[any]) {
 		personTable.AddSpecific(ctx.W, 69, Person{
 			Name: testName1,
@@ -369,7 +369,7 @@ func coreTestMultipleGamesSaveState(t *testing.T, saveStateHandler1 *gamedb.MySQ
 }
 
 // core test multiple games save transactions
-func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *gamedb.MySQLSaveStateHandler, saveTxHandler1 *gamedb.MySQLSaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *gamedb.MySQLSaveStateHandler, saveTxHandler2 *gamedb.MySQLSaveTransactionHandler, db2 *sql.DB) {
+func coreTestMultipleGamesSaveTransactions(t *testing.T, saveStateHandler1 *gamedb.SaveStateHandler, saveTxHandler1 *gamedb.SaveTransactionHandler, db1 *sql.DB, saveStateHandler2 *gamedb.SaveStateHandler, saveTxHandler2 *gamedb.SaveTransactionHandler, db2 *sql.DB) {
 	type testReq struct {
 		Boolean bool `json:"boolean"`
 	}

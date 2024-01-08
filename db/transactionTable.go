@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/celestiaorg/celestia-node/api/rpc/client"
 	"gorm.io/gorm"
 )
 
@@ -8,22 +9,30 @@ type SQLTransactionTable struct {
 	db *gorm.DB
 }
 
+type CelestiaConn struct {
+	*client.Client
+}
+
+func NewCelestiaConn(conn *client.Client) *CelestiaConn {
+	return &CelestiaConn{conn}
+}
+
 // player requests (aka transactions) are objects that need to be made available such that
 // anyone can recreate the state
 
 type TransactionSQLFormat struct {
-	GameId string
+	GameId string `json:"gameId"`
 
 	// unix in nano seconds
-	UnixTimestamp int `gorm:"primaryKey;autoIncrement:false"`
+	UnixTimestamp int `json:"unixTimestamp" gorm:"primaryKey;autoIncrement:false"`
 
 	// which tick it was registered at
-	Tick int
+	Tick int `json:"tick"`
 
 	// serialized data string
-	Data string
+	Data string `json:"data"`
 
-	Type string
+	Type string `json:"type"`
 }
 
 func NewTransactionTable(db *gorm.DB) (*SQLTransactionTable, error) {
